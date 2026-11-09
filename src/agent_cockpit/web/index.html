@@ -758,7 +758,8 @@ function accountView(){
     limHtml = `<div class="card help"><h3>${ic("clock",'style="vertical-align:-3px"')} Plan limits not reported yet</h3>
       <p>The 5-hour and weekly limits come from Claude Code's status line, which includes them for claude.ai Pro, Max and Ultra subscribers after the first response in a session.</p>
       <p>Turn on the relay once (your current status line keeps working), then send any prompt:</p>
-      <pre class="code">cockpit statusline on</pre>
+      <pre class="code">/agent-cockpit:account-limits     # inside Claude Code (plugin install)
+cockpit statusline on            # terminal (pip install)</pre>
       <p class="muted">API-key and Bedrock/Vertex users don't have plan limits; the token and cost estimates below still apply.</p></div>`;
   }
 

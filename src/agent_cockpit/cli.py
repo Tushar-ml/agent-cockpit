@@ -44,7 +44,7 @@ STATE_PATH = os.path.join(BASE, "state.json")
 SETTINGS_PATH = os.path.join(CLAUDE_DIR, "settings.json")
 HOOK_MARK = "agent-cockpit/hook.py"
 DEFAULT_PORT = 7777
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 MAX_EVENTS = 400
 SCAN_DAYS = 3
