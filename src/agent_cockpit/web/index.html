@@ -5,45 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent Cockpit</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23d97757'/%3E%3Cpath d='M16 6l2.6 7.4L26 16l-7.4 2.6L16 26l-2.6-7.4L6 16l7.4-2.6z' fill='white'/%3E%3C/svg%3E">
 <style>
 :root{
   color-scheme: light;
-  --bg:#f4f3ef; --surface:#ffffff; --surface-2:#f8f7f4; --surface-3:#efeee9; --border:#e3e1da; --border-strong:#cfccc2;
-  --text:#141413; --text-2:#52514e; --muted:#8a887f; --accent:#c96442; --accent-soft:#f6e3db;
-  --s-run:#2a78d6; --s-think:#6250d6; --s-sub:#1baf7a; --s-appr:#c98500; --s-wait:#d9652f; --s-idle:#0c8a0c; --s-err:#d03b3b; --s-end:#8a887f;
+  --bg:#fafafa; --surface:#ffffff; --surface-2:#f7f7f6; --surface-3:#efefed; --border:#e8e8e6; --border-strong:#d6d6d3;
+  --text:#0b0b0b; --text-2:#4b4b48; --muted:#8a8a85; --accent:#c96442; --accent-soft:#f8e7df;
+  --s-run:#2a78d6; --s-think:#6250d6; --s-sub:#1a9e6f; --s-appr:#b57800; --s-wait:#d9652f; --s-idle:#0c8a0c; --s-err:#d03b3b; --s-end:#8a8a85;
   --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100;
-  --code-bg:#f3f1ec; --diff-add:#e3f4e3; --diff-del:#fbe4e4;
-  --shadow:0 1px 2px rgba(20,20,19,.04),0 4px 16px rgba(20,20,19,.05);
-  --glow:0 0 0 1px rgba(201,133,0,.35),0 8px 30px rgba(201,133,0,.18);
+  --code-bg:#f6f6f4; --diff-add:#e6f4e6; --diff-del:#fbe6e6;
+  --shadow:none; --shadow-pop:0 12px 40px rgba(0,0,0,.14),0 0 0 1px rgba(0,0,0,.06);
+  --glow:0 0 0 1px rgba(181,120,0,.45),0 6px 24px rgba(181,120,0,.12);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme: dark;
-    --bg:#0f0f0e; --surface:#181817; --surface-2:#1e1e1c; --surface-3:#262624; --border:#2b2b28; --border-strong:#3a3a36;
-    --text:#f0efec; --text-2:#c3c2b7; --muted:#8b8a82; --accent:#e08a68; --accent-soft:#3a2219;
-    --s-run:#3987e5; --s-think:#9085e9; --s-sub:#22b882; --s-appr:#fab219; --s-wait:#ec835a; --s-idle:#2fbf2f; --s-err:#e66767; --s-end:#7a7972;
+    --bg:#0a0a0a; --surface:#111111; --surface-2:#161616; --surface-3:#1d1d1d; --border:#222222; --border-strong:#303030;
+    --text:#ededed; --text-2:#a3a3a3; --muted:#6f6f6f; --accent:#e08a68; --accent-soft:#2e1c15;
+    --s-run:#3987e5; --s-think:#9085e9; --s-sub:#22b882; --s-appr:#fab219; --s-wait:#ec835a; --s-idle:#2fbf2f; --s-err:#e66767; --s-end:#6f6f6f;
     --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500;
-    --code-bg:#121211; --diff-add:#14301a; --diff-del:#3a1717;
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
-    --glow:0 0 0 1px rgba(250,178,25,.4),0 8px 34px rgba(250,178,25,.14);
+    --code-bg:#0d0d0d; --diff-add:#11281a; --diff-del:#331515;
+    --shadow:none; --shadow-pop:0 16px 50px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
+    --glow:0 0 0 1px rgba(250,178,25,.45),0 6px 28px rgba(250,178,25,.10);
   }
 }
 :root[data-theme="dark"]{
   color-scheme: dark;
-  --bg:#0f0f0e; --surface:#181817; --surface-2:#1e1e1c; --surface-3:#262624; --border:#2b2b28; --border-strong:#3a3a36;
-  --text:#f0efec; --text-2:#c3c2b7; --muted:#8b8a82; --accent:#e08a68; --accent-soft:#3a2219;
-  --s-run:#3987e5; --s-think:#9085e9; --s-sub:#22b882; --s-appr:#fab219; --s-wait:#ec835a; --s-idle:#2fbf2f; --s-err:#e66767; --s-end:#7a7972;
+  --bg:#0a0a0a; --surface:#111111; --surface-2:#161616; --surface-3:#1d1d1d; --border:#222222; --border-strong:#303030;
+  --text:#ededed; --text-2:#a3a3a3; --muted:#6f6f6f; --accent:#e08a68; --accent-soft:#2e1c15;
+  --s-run:#3987e5; --s-think:#9085e9; --s-sub:#22b882; --s-appr:#fab219; --s-wait:#ec835a; --s-idle:#2fbf2f; --s-err:#e66767; --s-end:#6f6f6f;
   --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500;
-  --code-bg:#121211; --diff-add:#14301a; --diff-del:#3a1717;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
-  --glow:0 0 0 1px rgba(250,178,25,.4),0 8px 34px rgba(250,178,25,.14);
+  --code-bg:#0d0d0d; --diff-add:#11281a; --diff-del:#331515;
+  --shadow:none; --shadow-pop:0 16px 50px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
+  --glow:0 0 0 1px rgba(250,178,25,.45),0 6px 28px rgba(250,178,25,.10);
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--text);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
-code,pre,.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+body{background:var(--bg);color:var(--text);font:14px/1.5 Geist,Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+code,pre,.mono{font-family:"Geist Mono","JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::selection{background:color-mix(in srgb,var(--accent) 30%,transparent)}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.18s}
 button{font:inherit;color:inherit;cursor:pointer}
 a{color:inherit}
 .svg{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -55,12 +58,28 @@ a{color:inherit}
 .conn{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--muted)}
 .conn i{width:7px;height:7px;border-radius:50%;background:var(--s-err)}
 .conn.on i{background:var(--s-idle);box-shadow:0 0 0 3px color-mix(in srgb,var(--s-idle) 22%,transparent)}
-.kpis{display:flex;gap:10px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
-.kpi{display:flex;flex-direction:column;justify-content:center;padding:6px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);min-width:118px}
-.kpi b{font-size:18px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.2}
-.kpi span{font-size:11px;color:var(--muted);white-space:nowrap}
-.kpi.hot{border-color:var(--s-appr);box-shadow:var(--glow)}
+.kpis{display:flex;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.kpi{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;column-gap:10px;align-items:end;padding:7px 14px;border-right:1px solid var(--border);min-width:max-content;position:relative}
+.kpi:last-child{border-right:0}
+.kpi b{font:600 17px/1.15 "Geist Mono",ui-monospace,monospace;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11px;color:var(--muted);white-space:nowrap;grid-column:1}
+.kpi .spk{grid-row:1/3;grid-column:2;width:54px;height:24px;align-self:center;overflow:visible}
+.kpi .spk path{fill:none;stroke:var(--c1);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.kpi .spk .area{fill:color-mix(in srgb,var(--c1) 14%,transparent);stroke:none}
+.kpi .dl{font:500 10.5px "Geist Mono",monospace;margin-left:6px;color:var(--muted)}
+.kpi .dl.up{color:var(--s-wait)} .kpi .dl.down{color:var(--s-idle)}
+.kpi.hot{background:color-mix(in srgb,var(--s-appr) 9%,transparent)}
 .kpi.hot b{color:var(--s-appr)}
+.kpi.hot::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--s-appr)}
+.callrate{display:flex;flex-direction:column;gap:3px;min-width:150px}
+.callrate .pl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);white-space:nowrap}
+.callrate .pl b{font:600 11px "Geist Mono",monospace;color:var(--text-2)}
+.callrate .pb{display:flex;align-items:flex-end;gap:1px;height:22px}
+.callrate .pb i{flex:1;min-height:1px;background:var(--c1);opacity:.85;border-radius:1px 1px 0 0}
+.callrate .pb i.z{background:var(--border-strong);opacity:.6}
+.kbdbtn{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:12.5px}
+.kbdbtn:hover{color:var(--text);border-color:var(--border-strong)}
+.kbdbtn kbd{font:500 11px "Geist Mono",monospace;padding:1px 5px;border:1px solid var(--border-strong);border-radius:5px;color:var(--text-2)}
 .tools{display:flex;gap:6px}
 .iconbtn{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--text-2)}
 .iconbtn:hover{border-color:var(--border-strong);color:var(--text)}
@@ -74,10 +93,10 @@ main{padding:20px 24px 60px;min-width:0}
 .search input{border:0;outline:0;background:transparent;color:var(--text);font:inherit;width:100%}
 .seg{display:flex;padding:3px;background:var(--surface-3);border-radius:9px;margin-bottom:14px}
 .seg button{flex:1;border:0;background:transparent;padding:5px 8px;border-radius:7px;font-size:12.5px;font-weight:500;color:var(--text-2)}
-.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:0 0 0 1px var(--border)}
 .navitem{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border-radius:9px;border:0;background:transparent;text-align:left;font-weight:550;color:var(--text-2);margin-bottom:6px}
 .navitem:hover{background:var(--surface-3)}
-.navitem.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.navitem.on{background:var(--surface-3);color:var(--text)}
 .hostgrp{margin-top:14px}
 .hosthead{display:flex;align-items:center;gap:8px;padding:4px 6px 8px;font-size:12px;color:var(--text-2);font-weight:600}
 .hosthead .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -89,7 +108,10 @@ main{padding:20px 24px 60px;min-width:0}
 .badge.warn{color:var(--s-appr);border-color:color-mix(in srgb,var(--s-appr) 50%,var(--border))}
 .scard{display:block;width:100%;text-align:left;border:1px solid transparent;background:transparent;border-radius:11px;padding:9px 10px;margin-bottom:4px;position:relative}
 .scard:hover{background:var(--surface-3)}
-.scard.on{background:var(--surface);border-color:var(--border);box-shadow:var(--shadow)}
+.scard.on{background:var(--surface);border-color:var(--border)}
+.scard .stx{font-size:11.5px;font-weight:550;color:var(--sc)}
+.scard .mt{font:500 11px "Geist Mono",monospace;color:var(--muted)}
+.scard .mt.warn{color:var(--s-appr)}
 .scard .row1{display:flex;align-items:center;gap:8px}
 .scard .proj{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .scard .ago{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -108,11 +130,12 @@ main{padding:20px 24px 60px;min-width:0}
 .st-waiting_input{--sc:var(--s-wait)} .st-idle{--sc:var(--s-idle)} .st-error{--sc:var(--s-err)} .st-ended{--sc:var(--s-end)} .st-quiet{--sc:var(--s-end)}
 
 /* ---------- cards */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
-.card-h{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--border);font-weight:600;font-size:13px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px}
+.card-h{display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--border);font-weight:560;font-size:13px}
+.card-h .svg{color:var(--muted)}
 .card-h .sub{color:var(--muted);font-weight:500;font-size:12px;margin-left:auto}
 .card-b{padding:14px 16px}
-.section-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:22px 0 10px}
+.section-title{font-size:11.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:24px 0 10px}
 
 /* ---------- approvals */
 .dock{display:flex;flex-direction:column;gap:12px;margin-bottom:22px}
@@ -132,12 +155,12 @@ main{padding:20px 24px 60px;min-width:0}
 .btn.primary:hover{opacity:.9}
 .btn.good{color:var(--s-idle);border-color:color-mix(in srgb,var(--s-idle) 45%,var(--border))}
 .btn.bad{color:var(--s-err);border-color:color-mix(in srgb,var(--s-err) 45%,var(--border))}
-.btn kbd{font:500 10.5px "JetBrains Mono",monospace;padding:0 5px;border-radius:4px;border:1px solid currentColor;opacity:.6}
+.btn kbd{font:500 10.5px "Geist Mono","JetBrains Mono",monospace;padding:0 5px;border-radius:4px;border:1px solid currentColor;opacity:.6}
 .reason{flex:1;min-width:180px;padding:8px 10px;border-radius:9px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font:inherit;font-size:13px}
-.rule{font:12px "JetBrains Mono",monospace;padding:2px 7px;border-radius:6px;background:var(--surface-3);color:var(--text-2)}
+.rule{font:12px "Geist Mono","JetBrains Mono",monospace;padding:2px 7px;border-radius:6px;background:var(--surface-3);color:var(--text-2)}
 pre.code{margin:0;padding:12px 14px;border-radius:10px;background:var(--code-bg);border:1px solid var(--border);overflow:auto;max-height:340px;white-space:pre-wrap;word-break:break-word;line-height:1.55}
 .diff{border:1px solid var(--border);border-radius:10px;overflow:auto;max-height:360px;background:var(--code-bg)}
-.diff div{padding:0 12px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.6 "JetBrains Mono",monospace}
+.diff div{padding:0 12px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.6 "Geist Mono","JetBrains Mono",monospace}
 .diff .a{background:var(--diff-add)} .diff .d{background:var(--diff-del)}
 .diff .a::before{content:"+ ";color:var(--s-idle)} .diff .d::before{content:"− ";color:var(--s-err)}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:12.5px}
@@ -194,7 +217,7 @@ pre.code{margin:0;padding:12px 14px;border-radius:10px;background:var(--code-bg)
 .sa{padding:12px 16px;border-bottom:1px solid var(--border)}
 .sa:last-child{border-bottom:0}
 .sa .r1{display:flex;gap:8px;align-items:center}
-.sa .ty{font:600 11.5px "JetBrains Mono",monospace;color:var(--s-sub);background:color-mix(in srgb,var(--s-sub) 12%,transparent);padding:1px 7px;border-radius:6px}
+.sa .ty{font:600 11.5px "Geist Mono","JetBrains Mono",monospace;color:var(--s-sub);background:color-mix(in srgb,var(--s-sub) 12%,transparent);padding:1px 7px;border-radius:6px}
 .sa .ds{font-weight:600;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sa .ln{font-size:12px;color:var(--text-2);margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sa .mt{display:flex;gap:12px;font-size:11.5px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
@@ -242,7 +265,7 @@ table.mini td:not(:first-child),table.mini th:not(:first-child){text-align:right
 /* overview */
 .ov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
 .ocard{padding:16px;cursor:pointer;transition:transform .12s,border-color .12s;display:flex;flex-direction:column;gap:10px;text-align:left}
-.ocard:hover{transform:translateY(-1px);border-color:var(--border-strong)}
+.ocard:hover{border-color:var(--border-strong);background:var(--surface-2)}
 .ocard .r1{display:flex;align-items:center;gap:8px}
 .ocard h3{margin:0;font-size:15px;font-weight:650;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ocard .d{font-size:12.5px;color:var(--text-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:38px}
@@ -259,16 +282,89 @@ table.mini td:not(:first-child),table.mini th:not(:first-child){text-align:right
 .welcome{text-align:center;padding:60px 20px;color:var(--text-2)}
 .welcome h2{color:var(--text);letter-spacing:-.02em}
 .muted{color:var(--muted)}
-.toast{position:fixed;right:20px;bottom:20px;z-index:60;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:13px;box-shadow:var(--shadow);animation:slidein .2s}
+.toast{position:fixed;right:20px;bottom:20px;z-index:60;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:13px;box-shadow:var(--shadow-pop);animation:slidein .2s}
+/* new rows slide in (morph only creates genuinely new nodes) */
+.ev,.scard,.tnode,.tr-row{animation:enter .28s ease-out both}
+@keyframes enter{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition:none!important}}
+/* compact density */
+body.compact{font-size:13px}
+body.compact .card-b{padding:10px 12px} body.compact .card-h{padding:8px 12px}
+body.compact .ev{padding:4px 12px} body.compact .scard{padding:6px 8px}
+body.compact main{padding:14px 18px 40px} body.compact .now{padding:14px} body.compact .orb{width:48px;height:48px}
+body.compact .grid2{gap:12px} body.compact .stack{gap:12px}
 
 /* session tabs */
-.stabs{display:flex;gap:4px;margin:18px 0 0;border-bottom:1px solid var(--border)}
+.stabs{display:flex;gap:4px;margin:18px 0 0;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.stabs button{flex:none}
 .stabs button{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;padding:9px 14px;font-weight:600;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 .stabs button:hover{color:var(--text)}
 .stabs button.on{color:var(--text);border-bottom-color:var(--accent)}
 .stabs .cnt{font-size:11px;font-weight:600;padding:0 6px;border-radius:99px;background:var(--surface-3);color:var(--text-2)}
 .stabs .live-dot{width:6px;height:6px;border-radius:50%;background:var(--s-sub);animation:breathe 1.6s ease-in-out infinite}
 .tabpane{margin-top:18px}
+
+/* command palette */
+.cmdk{position:fixed;inset:0;z-index:80;background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-start;padding-top:12vh}
+.cmdk[hidden]{display:none}
+.cmdk-box{width:min(640px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--border-strong);border-radius:14px;box-shadow:var(--shadow-pop);overflow:hidden;animation:pop .14s ease-out}
+@keyframes pop{from{transform:scale(.98);opacity:0}to{transform:none;opacity:1}}
+.cmdk-in{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);color:var(--muted)}
+.cmdk-in input{flex:1;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:15px}
+.cmdk-list{max-height:min(420px,56vh);overflow:auto;padding:6px}
+.cmdk-g{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:10px 10px 4px}
+.cmdk-it{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;text-align:left;padding:8px 10px;border-radius:8px;color:var(--text);font-size:13.5px}
+.cmdk-it .svg{color:var(--muted)}
+.cmdk-it .h{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+.cmdk-it.on{background:var(--surface-3)}
+.cmdk-it.on .svg{color:var(--text)}
+.cmdk-it mark{background:none;color:var(--accent);font-weight:600}
+.cmdk-foot{display:flex;gap:14px;padding:8px 14px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted)}
+.cmdk-foot kbd{font:500 10.5px "Geist Mono",monospace;padding:0 4px;border:1px solid var(--border-strong);border-radius:4px}
+.cmdk-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+
+/* trace waterfall */
+.tr-head{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tr-nav{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.tr-nav button{border:0;background:transparent;padding:4px 9px;color:var(--text-2)}
+.tr-nav button:disabled{opacity:.35;cursor:default}
+.tr-nav span{font:500 12px "Geist Mono",monospace;padding:0 8px;color:var(--text);border-left:1px solid var(--border);border-right:1px solid var(--border);line-height:26px}
+.tr-prompt{flex:1;min-width:200px;font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-stats{display:flex;gap:14px;font:500 11.5px "Geist Mono",monospace;color:var(--muted)}
+.tr-stats b{color:var(--text);font-weight:600}
+.tr-stats .bad b{color:var(--s-err)} .tr-stats .appr b{color:var(--s-appr)}
+.tr{display:grid;grid-template-columns:minmax(220px,34%) 1fr;font-size:12px}
+.tr-axis{display:contents}
+.tr-axis .l{padding:6px 16px;color:var(--muted);font-size:11px;border-bottom:1px solid var(--border)}
+.tr-axis .r{position:relative;height:28px;border-bottom:1px solid var(--border);margin-right:16px}
+.tr-axis .r span{position:absolute;top:7px;transform:translateX(-50%);font:500 10.5px "Geist Mono",monospace;color:var(--muted);white-space:nowrap}
+.tr-axis .r span:first-child{transform:none} .tr-axis .r span:last-child{transform:translateX(-100%)}
+.tr-body{display:contents}
+.tr-row{display:contents;cursor:pointer}
+.tr-row>div{border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent);height:27px}
+.tr-row:hover>div,.tr-row.sel>div{background:var(--surface-2)}
+.tr-row.sel>div{background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+.tr-row .l{display:flex;align-items:center;gap:6px;padding:0 10px 0 16px;min-width:0;white-space:nowrap}
+.tr-row .l .svg{width:13px;height:13px;color:var(--muted)}
+.tr-row .l b{font-weight:560}
+.tr-row .l em{font-style:normal;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.tr-row .l .tw{color:var(--border-strong);font-family:"Geist Mono",monospace}
+.tr-row .r{position:relative;margin-right:16px;background-image:linear-gradient(to right,color-mix(in srgb,var(--border) 70%,transparent) 1px,transparent 1px);background-size:25% 100%}
+.tr-bar{position:absolute;top:7px;height:13px;border-radius:3px;min-width:3px;background:var(--bc)}
+.tr-bar.sub{background:color-mix(in srgb,var(--bc) 22%,transparent);border:1px solid color-mix(in srgb,var(--bc) 70%,transparent)}
+.tr-bar.appr{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--s-appr) 70%,transparent) 0 4px,color-mix(in srgb,var(--s-appr) 30%,transparent) 4px 8px)}
+.tr-bar.run{background-image:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);background-size:40px 100%;background-repeat:no-repeat;animation:shimmer 1.2s linear infinite}
+@keyframes shimmer{from{background-position:-40px 0}to{background-position:calc(100% + 40px) 0}}
+.tr-bar.fail{--bc:var(--s-err)}
+.tr-lab{position:absolute;top:6px;font:500 10.5px "Geist Mono",monospace;color:var(--muted);white-space:nowrap;padding-left:6px}
+.tr-mark{position:absolute;top:0;bottom:0;width:0;border-left:1px dashed var(--muted)}
+.tr-detail{border-top:1px solid var(--border);padding:14px 16px;display:grid;grid-template-columns:repeat(4,auto) 1fr;gap:4px 22px;align-items:baseline}
+.tr-detail .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.tr-detail .v{font:500 12.5px "Geist Mono",monospace}
+.tr-detail pre{grid-column:1/-1;margin:8px 0 0}
+.tr-legend{display:flex;flex-wrap:wrap;gap:14px;padding:10px 16px;font-size:11.5px;color:var(--text-2);border-top:1px solid var(--border)}
+.tr-legend span{display:inline-flex;align-items:center;gap:6px}
+.tr-legend i{display:inline-block;width:16px;height:9px;border-radius:2px}
 
 /* agent tree */
 .tree-wrap{overflow:auto;padding:18px}
@@ -289,7 +385,7 @@ table.mini td:not(:first-child),table.mini th:not(:first-child){text-align:right
 .tnode.session{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
 .tnode.session .svg{color:var(--accent)}
 .tnode.agent{cursor:pointer;border-color:color-mix(in srgb,var(--s-sub) 40%,var(--border))}
-.tnode.agent .ty{font:600 10.5px "JetBrains Mono",monospace;color:var(--s-sub);background:color-mix(in srgb,var(--s-sub) 12%,transparent);padding:0 6px;border-radius:5px;flex:none}
+.tnode.agent .ty{font:600 10.5px "Geist Mono","JetBrains Mono",monospace;color:var(--s-sub);background:color-mix(in srgb,var(--s-sub) 12%,transparent);padding:0 6px;border-radius:5px;flex:none}
 .tnode.agent.running{--gc:var(--s-sub);animation:glow 2s ease-in-out infinite}
 .tnode.agent.sel{outline:2px solid var(--s-sub);outline-offset:2px}
 .tnode.agent.failed{border-color:color-mix(in srgb,var(--s-err) 55%,var(--border))}
@@ -360,6 +456,10 @@ table.tbl .share i{display:block;height:100%;background:var(--c1);border-radius:
   main{padding:16px}
   .top{flex-wrap:wrap;gap:10px;padding:10px 16px}
   .kpis{order:3;flex-basis:100%}
+  .callrate{display:none}
+  .kbdbtn{font-size:0;gap:0} .kbdbtn kbd{font-size:11px}
+  .tr{grid-template-columns:150px 1fr}
+  .tr-detail{grid-template-columns:1fr 1fr}
   .sess-h{flex-direction:column}
   .sess-h .acts{margin-left:0}
 }
@@ -370,7 +470,10 @@ table.tbl .share i{display:block;height:100%;background:var(--c1);border-radius:
   <div class="brand"><div class="logo"><svg class="svg" viewBox="0 0 24 24" style="stroke-width:2.2"><path d="M12 3l2 6.5L20.5 12 14 14l-2 7-2-7-6.5-2L10 9.5z"/></svg></div>Agent Cockpit
     <span class="conn" id="conn"><i></i><span>connecting</span></span></div>
   <div class="kpis" id="kpis"></div>
+  <div class="callrate" id="pulse" title="Tool calls per minute across every session and machine, last hour"></div>
   <div class="tools">
+    <button class="kbdbtn" id="btnCmdk" title="Command palette">Search<kbd>⌘K</kbd></button>
+    <button class="iconbtn" id="btnDensity" title="Toggle density"></button>
     <button class="iconbtn" id="btnNotify" title="Desktop notifications for approvals"></button>
     <button class="iconbtn" id="btnSound" title="Sound on approvals"></button>
     <button class="iconbtn" id="btnTheme" title="Toggle theme"></button>
@@ -390,6 +493,11 @@ table.tbl .share i{display:block;height:100%;background:var(--c1);border-radius:
   </main>
 </div>
 <div id="tip"></div>
+<div class="cmdk" id="cmdk" hidden><div class="cmdk-box" role="dialog" aria-label="Command palette">
+  <div class="cmdk-in"><svg class="svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="cmdkq" placeholder="Search sessions, jump anywhere, approve…" autocomplete="off" spellcheck="false"></div>
+  <div class="cmdk-list" id="cmdkl"></div>
+  <div class="cmdk-foot"><span><kbd>↑</kbd> <kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> run</span><span><kbd>esc</kbd> close</span><span style="margin-left:auto"><kbd>⌘K</kbd> anytime</span></div>
+</div></div>
 <script>
 const TOKEN = "__COCKPIT_TOKEN__";
 const $ = s => document.querySelector(s);
@@ -480,7 +588,7 @@ function connect(){
     if (m.type==="session"){
       const old = S.sessions.get(m.session.id);
       const events = old?.events || [];
-      if (m.event){ events.push(m.event); if (events.length>400) events.splice(0, events.length-400); }
+      if (m.event){ events.push(m.event); if (events.length>600) events.splice(0, events.length-600); }
       S.sessions.set(m.session.id, {...m.session, events});
     } else if (m.type==="host"){ S.hosts.set(m.host.key, m.host); }
     else if (m.type==="approval"){
@@ -509,6 +617,38 @@ let actx; function beep(){ try{ actx = actx || new AudioContext(); const t=actx.
   g.gain.setValueAtTime(0,t+d); g.gain.linearRampToValueAtTime(.12,t+d+.02); g.gain.exponentialRampToValueAtTime(.001,t+d+.22); o.connect(g).connect(actx.destination); o.start(t+d); o.stop(t+d+.25); }); }catch{} }
 function toast(msg){ const d=document.createElement("div"); d.className="toast"; d.textContent=msg; document.body.appendChild(d); setTimeout(()=>d.remove(),2200); }
 
+/* ------------------------------------------------------------- morph: patch the DOM instead of replacing it */
+// Keeps running CSS animations, scroll positions, focus and typed input intact; only changed nodes are touched.
+// Elements with data-key are matched by key, so list items move instead of being recreated (new ones animate in).
+const _tpl = document.createElement("template");
+function morph(el, html){ _tpl.innerHTML = html; patchKids(el, _tpl.content); }
+function sameNode(a,b){ return a.nodeType===b.nodeType && (a.nodeType!==1 || a.tagName===b.tagName); }
+function patchKids(parent, src){
+  const byKey = new Map();
+  for (const c of parent.childNodes) if (c.nodeType===1 && c.dataset.key) byKey.set(c.dataset.key, c);
+  let cur = parent.firstChild;
+  for (const n of [...src.childNodes]){
+    const key = n.nodeType===1 ? n.getAttribute("data-key") : null;
+    let m = null;
+    if (key){ m = byKey.get(key); if (m && !sameNode(m,n)) m = null; byKey.delete(key); }
+    else if (cur && sameNode(cur,n) && !(cur.nodeType===1 && cur.dataset.key)) m = cur;
+    if (m){ if (m!==cur) parent.insertBefore(m, cur); else cur = cur.nextSibling; patchNode(m, n); }
+    else parent.insertBefore(n, cur);
+  }
+  while (cur){ const nx = cur.nextSibling; cur.remove(); cur = nx; }
+}
+function patchNode(o, n){
+  if (o.nodeType===3 || o.nodeType===8){ if (o.nodeValue!==n.nodeValue) o.nodeValue = n.nodeValue; return; }
+  const keep = o.tagName==="DETAILS" ? ["open"] : [];
+  for (const a of [...o.attributes]) if (!n.hasAttribute(a.name) && !keep.includes(a.name)) o.removeAttribute(a.name);
+  for (const a of n.attributes) if (o.getAttribute(a.name)!==a.value) o.setAttribute(a.name, a.value);
+  if (o.tagName==="INPUT" || o.tagName==="TEXTAREA") return;
+  if (o.hasAttribute("data-live")) return; // contents managed by timers (elapsed clocks)
+  patchKids(o, n);
+}
+// smooth page switches where the browser supports it
+function go(fn){ if (document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) document.startViewTransition(()=>{ fn(); render(); }); else { fn(); render(); } }
+
 /* ------------------------------------------------------------- render */
 let lastSig = {};
 function render(){
@@ -519,25 +659,77 @@ function render(){
 function renderConn(){ const c=$("#conn"); c.className="conn"+(S.connected?" on":""); c.lastElementChild.textContent = S.connected?"live":"offline"; }
 const pendingApprovals = () => [...S.approvals.values()].filter(a=>a.status==="pending").sort((a,b)=>a.created-b.created);
 
+/* ---------- sparklines + count-up */
+function spark(vals, opts={}){
+  if (!vals || vals.length<2 || vals.every(v=>!v)) return "";
+  const W=54, H=24, mx = opts.max ?? Math.max(...vals), mn = opts.min ?? 0, rng = (mx-mn)||1;
+  const pts = vals.map((v,i)=>[i*W/(vals.length-1), H-1-((v-mn)/rng)*(H-3)]);
+  const d = pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  return `<svg class="spk" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path class="area" d="${d} L${W} ${H} L0 ${H} Z"/><path d="${d}"/></svg>`;
+}
+const FMT = { int:v=>String(Math.round(v)), pct:v=>Math.round(v)+"%", money:v=>money(v), n:v=>fmtN(Math.round(v)) };
+function countUp(root){
+  root.querySelectorAll("[data-num]").forEach(el=>{
+    const to=+el.dataset.num, fmt=FMT[el.dataset.fmt]||FMT.int, from = el._v ?? to;
+    el._v = to;
+    if (from===to || matchMedia("(prefers-reduced-motion: reduce)").matches){ el.textContent = fmt(to); return; }
+    const t0=performance.now(), D=450;
+    const step=t=>{ const k=Math.min(1,(t-t0)/D), e=1-Math.pow(1-k,3); el.textContent = fmt(from+(to-from)*e); if(k<1 && el._v===to) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
+}
+const dayKeyOf = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function dailySeries(field, days){
+  const A=S.account?.daily||{}, out=[], t=new Date(now()*1000);
+  for (let i=days-1;i>=0;i--){ const d=new Date(t.getTime()-i*864e5); out.push((A[dayKeyOf(d)]||{})[field]||0); }
+  return out;
+}
+function limitSeries(idx, windowSec, n){
+  const lim=primaryLimits(); if(!lim) return [];
+  const h=(S.limitHist[lim.host]||[]).filter(x=>x[idx]!=null && x[0]>=now()-windowSec);
+  if (h.length<2) return [];
+  const out=[]; let j=0, last=h[0][idx];
+  for (let i=0;i<n;i++){ const t=now()-windowSec+(i+1)*windowSec/n; while(j<h.length && h[j][0]<=t){ last=h[j][idx]; j++; } out.push(last); }
+  return out;
+}
+function delta(cur, base){
+  if (!base) return "";
+  const p = (cur-base)/base*100; if (Math.abs(p)<1) return `<span class="dl">±0%</span>`;
+  return `<span class="dl ${p>0?"up":"down"}">${p>0?"↑":"↓"}${Math.abs(p).toFixed(0)}%</span>`;
+}
+
 function renderKpis(){
   const all=[...S.sessions.values()];
-  const act = all.filter(s=>["running","thinking","subagents","awaiting_approval","waiting_input"].includes(effStatus(s))).length;
+  const act = all.filter(s=>["running","thinking","subagents"].includes(effStatus(s))).length;
   const subs = all.reduce((n,s)=>n+Object.values(s.subagents||{}).filter(x=>x.status==="running").length,0);
-  const day = all.filter(s=>now()-s.last_ts<86400).reduce((n,s)=>n+tot(s.usage||{}),0);
-  const out = all.filter(s=>now()-s.last_ts<86400).reduce((n,s)=>n+(s.usage?.out||0),0);
-  const hosts = [...S.hosts.values()].filter(h=>now()-h.last_seen<3600).length;
-  const appr = pendingApprovals().length;
-  const waiting = all.filter(s=>effStatus(s)==="waiting_input").length;
+  const needs = pendingApprovals().length + all.filter(s=>effStatus(s)==="waiting_input").length;
   const lim = primaryLimits(), rl = lim?.rate_limits || {};
   const fh = rl.five_hour?.used_percentage, sd = rl.seven_day?.used_percentage;
-  const k = [
-    ...(fh!=null?[[Math.round(fh)+"%","5-hour limit used", fh>=80]]:[]),
-    ...(sd!=null?[[Math.round(sd)+"%","Weekly limit used", sd>=80]]:[]),
-    [act,"Working now"], [appr,"Awaiting approval",appr>0], [waiting,"Waiting for input"], [subs,"Subagents running"],
-    [fmtN(day),"Tokens · 24h incl. cache"], [fmtN(out),"Output · 24h"], [hosts,"Hosts active · 1h"],
-  ];
-  const html = k.map(([v,l,hot])=>`<div class="kpi ${hot?"hot":""}"><b>${v}</b><span>${l}</span></div>`).join("");
-  if (lastSig.k!==html){ $("#kpis").innerHTML=html; lastSig.k=html; }
+  const cost14 = dailySeries("cost", 14), tok14 = dailySeries("tok", 14);
+  const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
+  const tile = (num, fmt, label, opts={}) => `<div class="kpi ${opts.hot?"hot":""}" data-key="k-${label}" ${opts.tip?`title="${esc(opts.tip)}"`:""}>
+      <b><span data-num="${num}" data-fmt="${fmt}">${FMT[fmt](num)}</span>${opts.dl||""}</b>${opts.spark||""}<span>${label}</span></div>`;
+  const html = [
+    fh!=null ? tile(fh,"pct","5-hour limit",{hot:fh>=80, spark:spark(limitSeries(1,5*3600,24),{max:100}), tip:"Share of your plan's rolling 5-hour limit used"}) : "",
+    sd!=null ? tile(sd,"pct","Weekly limit",{hot:sd>=80, spark:spark(limitSeries(2,7*86400,28),{max:100})}) : "",
+    tile(act,"int","Working now"),
+    tile(needs,"int","Needs you",{hot:needs>0, tip:"Approvals waiting plus sessions waiting for your input"}),
+    tile(subs,"int","Subagents running"),
+    S.account ? tile(cost14[13],"money","Spend today",{spark:spark(cost14), dl:delta(cost14[13], avg(cost14.slice(0,13))), tip:"API-equivalent cost today vs your 13-day average"}) : "",
+    S.account ? tile(tok14[13],"n","Tokens today",{spark:spark(tok14), dl:delta(tok14[13], avg(tok14.slice(0,13)))}) : "",
+  ].join("");
+  if (lastSig.k!==html){ morph($("#kpis"), html); lastSig.k=html; }
+  countUp($("#kpis"));
+  renderPulse();
+}
+function renderPulse(){
+  const N=60, end=Math.floor(now()/60), b=new Array(N).fill(0);
+  for (const s of S.sessions.values()) for (const e of (s.events||[])){
+    if (e.kind!=="PreToolUse") continue; const m=Math.floor(e.t/60); const i=N-1-(end-m); if (i>=0 && i<N) b[i]++;
+  }
+  const mx=Math.max(1,...b), last5=b.slice(-5).reduce((x,y)=>x+y,0)/5;
+  const html = `<div class="pl"><span>tool calls / min</span><b>${last5.toFixed(1)}</b></div><div class="pb">${b.map((v,i)=>`<i class="${v?"":"z"}" style="height:${v?Math.max(8,100*v/mx):6}%" data-tip="${N-1-i?`${N-1-i} min ago`:"this minute"} · ${v} tool call${v===1?"":"s"}"></i>`).join("")}</div>`;
+  if (lastSig.pulse!==html){ morph($("#pulse"), html); lastSig.pulse=html; }
 }
 
 function matches(s){
@@ -565,22 +757,22 @@ function renderSide(){
   for (const hk of hostOrder){
     const h = S.hosts.get(hk) || {hostname:hk};
     const online = now()-(h.last_seen||0) < 600;
-    html += `<div class="hostgrp"><div class="hosthead"><span class="dot ${online?"on":""}"></span>${ic(h.local?"laptop":"server")}<span class="name">${esc(h.user?h.user+"@":"")}${esc(h.hostname)}</span>
+    html += `<div class="hostgrp" data-key="h-${esc(hk)}"><div class="hosthead"><span class="dot ${online?"on":""}"></span>${ic(h.local?"laptop":"server")}<span class="name">${esc(h.user?h.user+"@":"")}${esc(h.hostname)}</span>
       ${h.ssh?`<span class="badge ssh" title="via SSH from ${esc(h.ssh_from)}">SSH</span>`: h.local?`<span class="badge local">LOCAL</span>`:`<span class="badge">REMOTE</span>`}</div>`;
     for (const s of groups.get(hk)){
       const st = effStatus(s);
       const subsRun = Object.values(s.subagents||{}).filter(x=>x.status==="running").length;
       const act = s.current ? `${toolName(s.current.tool)} · ${s.current.summary}` : s.status_detail || "";
-      html += `<button class="scard ${S.sel===s.id?"on":""} ${isActive(s)?"":"dim"}" data-sel="${esc(s.id)}">
+      html += `<button class="scard ${S.sel===s.id?"on":""} ${isActive(s)?"":"dim"}" data-key="s-${esc(s.id)}" data-sel="${esc(s.id)}">
         <div class="row1">${sdot(st)}<span class="proj">${esc(s.project)}</span><span class="ago">${ago(s.last_ts)}</span></div>
         <div class="act">${esc(act)}</div>
-        <div class="meta">${pill(st)}${s.pending?.length?`<span class="badge warn">${s.pending.length} approval</span>`:""}${subsRun?`<span class="badge">${subsRun} agents</span>`:""}<span class="badge">${fmtN(tot(s.usage||{}))} tok</span></div>
+        <div class="meta"><span class="stx st-${st}">${esc((STATUS[st]||STATUS.idle).l)}</span>${s.pending?.length?`<span class="mt warn">· ${s.pending.length} approval</span>`:""}${subsRun?`<span class="mt">· ${subsRun} agents</span>`:""}<span class="mt">· ${fmtN(tot(s.usage||{}))}</span>${s.cost_usd!=null?`<span class="mt">· ${money(s.cost_usd)}</span>`:""}</div>
       </button>`;
     }
     html += `</div>`;
   }
   if (!list.length) html = `<div class="empty-side">${S.sessions.size? "No sessions match this filter." : "No sessions yet. Start <code>claude</code> anywhere with the hooks installed."}</div>`;
-  if (lastSig.side!==html){ $("#side").innerHTML = html; lastSig.side=html; }
+  if (lastSig.side!==html){ morph($("#side"), html); lastSig.side=html; }
   const nv=$("#navOverview"); nv.innerHTML=`${ic("grid")}Overview`; nv.classList.toggle("on", !S.sel && S.page!=="account");
   const lim = primaryLimits(); const fh = lim?.rate_limits?.five_hour?.used_percentage;
   const na=$("#navAccount"); na.innerHTML=`${ic("zap")}Account usage${fh!=null?`<span class="badge" style="margin-left:auto">5h ${Math.round(fh)}%</span>`:""}`; na.classList.toggle("on", !S.sel && S.page==="account");
@@ -613,12 +805,12 @@ function renderDock(){
   const sig = list.map(a=>a.id).join(",");
   if (lastSig.dock===sig){ updateTimers(); return; }
   lastSig.dock = sig;
-  $("#dock").innerHTML = list.map((a,i)=>{
+  morph($("#dock"), list.map((a,i)=>{
     const s = S.sessions.get(a.session) || {};
     const h = hostOf(s);
     const rules = ruleText(a.suggestions);
     const sub = a.agent_id ? Object.values(s.subagents||{}).find(x=>x.agent_id===a.agent_id) : null;
-    return `<div class="appr" data-aid="${a.id}">
+    return `<div class="appr" data-key="a-${a.id}" data-aid="${a.id}">
       <div class="appr-h">${ic("shield",'style="color:var(--s-appr)"')}<span class="t">${esc(toolName(a.tool))}</span>
         <span class="where">${h.ssh?`<span class="badge ssh">SSH</span> `:""}${esc(h.hostname)} · <a href="#" data-sel="${esc(a.session)}">${esc(a.project)}</a>${sub?` · subagent <b>${esc(sub.type)}</b>`:""}</span>
         <span class="timer" data-exp="${a.expires}" data-created="${a.created}"></span></div>
@@ -632,7 +824,7 @@ function renderDock(){
         <button class="btn" data-dec="ask" data-aid="${a.id}" title="Release to the normal terminal prompt">${ic("terminal")}Answer in terminal</button>
         ${rules.length?`<span class="muted" style="font-size:12px;width:100%">Always allow adds: ${rules.map(r=>`<span class="rule">${esc(r)}</span>`).join(" ")}</span>`:""}
       </div></div>`;
-  }).join("");
+  }).join(""));
   updateTimers();
 }
 function updateTimers(){
@@ -658,13 +850,7 @@ function renderView(){
   const s = S.sel && S.sessions.get(S.sel);
   const html = s ? sessionView(s) : S.page==="account" ? accountView() : overview();
   const v=$("#view");
-  if (lastSig.view!==html){
-    const tl = v.querySelector(".tl"); const st = tl ? tl.scrollTop : 0;
-    const open = [...v.querySelectorAll("details[open]")].map(d=>d.dataset.k);
-    v.innerHTML = html; lastSig.view = html;
-    const ntl = v.querySelector(".tl"); if (ntl) ntl.scrollTop = st;
-    open.forEach(k=>{ const d=v.querySelector(`details[data-k="${k}"]`); if(d) d.open=true; });
-  }
+  if (lastSig.view!==html){ morph(v, html); lastSig.view = html; }
   updateTimers();
 }
 
@@ -674,7 +860,7 @@ function overview(){
   const cards = list.slice(0,60).map(s=>{
     const st=effStatus(s), h=hostOf(s);
     const subsRun = Object.values(s.subagents||{}).filter(x=>x.status==="running").length;
-    return `<button class="card ocard" data-sel="${esc(s.id)}">
+    return `<button class="card ocard" data-key="o-${esc(s.id)}" data-sel="${esc(s.id)}">
       <div class="r1">${sdot(st)}<h3>${esc(s.project)}</h3>${pill(st)}</div>
       <div class="d">${esc(s.current? `${toolName(s.current.tool)} · ${s.current.summary}` : (s.status_detail||s.title))}</div>
       <div class="f"><span>${ic(h.local?"laptop":"server",'style="width:12px;height:12px;vertical-align:-2px"')} ${esc(h.hostname)}${h.ssh?" · ssh":""}</span><span>${esc(shortModel(s.model))}</span><span>${fmtN(tot(s.usage||{}))} tok</span>${subsRun?`<span>${subsRun} subagents</span>`:""}<span style="margin-left:auto">${ago(s.last_ts)} ago</span></div>
@@ -742,7 +928,7 @@ function sessionView(s){
   </div>
 
   ${sessionTabs(s, subs)}
-  ${S.stab==="tree" ? `<div class="tabpane">${agentTreeCard(s)}</div>` : S.stab==="files" ? `<div class="tabpane">${hotFilesCard(s)}</div>` : `
+  ${S.stab==="trace" ? `<div class="tabpane">${traceCard(s)}</div>` : S.stab==="tree" ? `<div class="tabpane">${agentTreeCard(s)}</div>` : S.stab==="files" ? `<div class="tabpane">${hotFilesCard(s)}</div>` : `
   <div class="grid2">
     <div class="stack">
       <div class="card"><div class="card-h">${ic("list")}Activity
@@ -764,11 +950,151 @@ function sessionTabs(s, subs){
   const run = subs.filter(x=>x.status==="running").length;
   const nf = Object.keys(s.files||{}).length;
   const t = (k, icon, label, extra) => `<button data-stab="${k}" class="${S.stab===k?"on":""}">${ic(icon)}${label}${extra||""}</button>`;
-  return `<div class="stabs">${t("activity","list","Activity")}${t("tree","bot","Agent tree", run?`<span class="live-dot" title="${run} running"></span>`: subs.length?`<span class="cnt">${subs.length}</span>`:"")}${t("files","file","Hot files", nf?`<span class="cnt">${nf}</span>`:"")}</div>`;
+  return `<div class="stabs">${t("activity","list","Activity")}${t("trace","clock","Trace")}${t("tree","bot","Agent tree", run?`<span class="live-dot" title="${run} running"></span>`: subs.length?`<span class="cnt">${subs.length}</span>`:"")}${t("files","file","Hot files", nf?`<span class="cnt">${nf}</span>`:"")}</div>`;
+}
+
+/* ---------- command palette */
+const CK = {items:[], shown:[], i:0};
+function cmdkItems(){
+  const it = [], sel = S.sel && S.sessions.get(S.sel);
+  for (const a of pendingApprovals()){
+    const lbl = `${toolName(a.tool)} — ${a.summary||""}`.slice(0,90);
+    it.push({g:"Needs you", icon:"check", label:`Approve: ${lbl}`, hint:a.project, run:()=>decide(a.id,"allow")});
+    it.push({g:"Needs you", icon:"x", label:`Deny: ${lbl}`, hint:a.project, run:()=>decide(a.id,"deny")});
+  }
+  for (const s of [...S.sessions.values()].filter(s=>effStatus(s)==="waiting_input")) it.push({g:"Needs you", icon:"msg", label:`${s.project} is waiting for you`, hint:hostOf(s).hostname, run:()=>go(()=>{S.sel=s.id;})});
+  if (sel) for (const [k,l,i] of [["activity","Activity","list"],["trace","Trace","clock"],["tree","Agent tree","bot"],["files","Hot files","file"]])
+    it.push({g:`This session · ${sel.project}`, icon:i, label:`Open ${l}`, run:()=>go(()=>{S.stab=k;})});
+  if (sel) it.push({g:`This session · ${sel.project}`, icon:"terminal", label:"Copy resume command", run:()=>navigator.clipboard?.writeText(`cd ${JSON.stringify(sel.cwd)} && claude --resume ${sel.id}`).then(()=>toast("Copied resume command"))});
+  const ss = [...S.sessions.values()].sort((a,b)=>(isActive(b)-isActive(a)) || b.last_ts-a.last_ts);
+  for (const s of ss.slice(0,80)){ const h=hostOf(s), st=effStatus(s);
+    it.push({g:"Sessions", icon:h.local?"laptop":"server", label:`${s.project}${s.title?` — ${s.title}`:""}`, hint:`${(STATUS[st]||STATUS.idle).l} · ${h.hostname} · ${ago(s.last_ts)}`, run:()=>go(()=>{S.sel=s.id; S.traceTurn=null; S.traceSel=null; S.treeSel=null; history.replaceState(null,"","#"+encodeURIComponent(s.id));})}); }
+  it.push({g:"Go to", icon:"grid", label:"Overview", run:()=>go(()=>{S.sel=null;S.page="overview";})});
+  it.push({g:"Go to", icon:"zap", label:"Account usage & plan limits", run:()=>go(()=>{S.sel=null;S.page="account";})});
+  for (const [f,l] of [["active","Active"],["all","All"],["ended","History"]]) it.push({g:"Go to", icon:"list", label:`Show ${l} sessions`, run:()=>{ S.filter=f; document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",b.dataset.f===f)); render(); }});
+  it.push({g:"Settings", icon:"moon", label:"Toggle theme", run:()=>$("#btnTheme").click()});
+  it.push({g:"Settings", icon:"list", label:"Toggle density", run:()=>$("#btnDensity").click()});
+  it.push({g:"Settings", icon:"vol", label:"Toggle approval sound", run:()=>$("#btnSound").click()});
+  it.push({g:"Settings", icon:"bell", label:"Toggle desktop notifications", run:()=>$("#btnNotify").click()});
+  return it;
+}
+function fuzzy(q, text){
+  if (!q) return {score:0, html:esc(text)};
+  const t=text.toLowerCase(), qq=q.toLowerCase(); let idx=t.indexOf(qq);
+  if (idx>=0) return {score:1000-idx-(text.length/100), html:esc(text.slice(0,idx))+"<mark>"+esc(text.slice(idx,idx+q.length))+"</mark>"+esc(text.slice(idx+q.length))};
+  // subsequence match, but only when the matched letters sit close together (no "t…r…c" across a whole sentence)
+  let j=0, score=0, last=-2, first=-1, html="";
+  for (let i=0;i<text.length;i++){ if (j<qq.length && t[i]===qq[j]){ if(first<0) first=i; score += (i===last+1?6:1) + (i===0||" -_/·".includes(t[i-1])?4:0); last=i; j++; html+="<mark>"+esc(text[i])+"</mark>"; } else html+=esc(text[i]); }
+  if (j<qq.length || (last-first) > Math.max(6, qq.length*3)) return null;
+  return {score, html};
+}
+function renderCmdk(){
+  const q=$("#cmdkq").value.trim();
+  const res=[]; for (const x of CK.items){
+    const lm = fuzzy(q, x.label), hm = !lm && q && (x.hint||"").toLowerCase().includes(q.toLowerCase());
+    if (!lm && !hm) continue;
+    res.push({...x, score: lm ? lm.score : 1, html: lm ? lm.html : esc(x.label)}); }
+  if (q) res.sort((a,b)=>b.score-a.score);
+  CK.shown = res.slice(0,60); CK.i = Math.min(CK.i, Math.max(0, CK.shown.length-1));
+  let g=null, html="";
+  CK.shown.forEach((x,i)=>{ if (!q && x.g!==g){ g=x.g; html+=`<div class="cmdk-g">${esc(g)}</div>`; }
+    html+=`<button class="cmdk-it ${i===CK.i?"on":""}" data-ck="${i}">${ic(x.icon)}<span>${x.html}</span>${x.hint?`<span class="h">${esc(x.hint)}</span>`:""}</button>`; });
+  $("#cmdkl").innerHTML = html || `<div class="cmdk-empty">No matches for “${esc(q)}”</div>`;
+  $("#cmdkl").querySelector(".cmdk-it.on")?.scrollIntoView({block:"nearest"});
+}
+function openCmdk(){ CK.items=cmdkItems(); CK.i=0; $("#cmdk").hidden=false; $("#cmdkq").value=""; renderCmdk(); $("#cmdkq").focus(); }
+function closeCmdk(){ $("#cmdk").hidden=true; }
+function runCmdk(i){ const x=CK.shown[i]; if(!x) return; closeCmdk(); x.run(); }
+$("#cmdkq").addEventListener("input", ()=>{ CK.i=0; renderCmdk(); });
+$("#cmdkq").addEventListener("keydown", e=>{
+  if (e.key==="ArrowDown"){ e.preventDefault(); CK.i=Math.min(CK.shown.length-1, CK.i+1); renderCmdk(); }
+  else if (e.key==="ArrowUp"){ e.preventDefault(); CK.i=Math.max(0, CK.i-1); renderCmdk(); }
+  else if (e.key==="Enter"){ e.preventDefault(); runCmdk(CK.i); }
+  else if (e.key==="Escape"){ e.preventDefault(); closeCmdk(); }
+});
+$("#cmdk").addEventListener("click", e=>{ const b=e.target.closest("[data-ck]"); if (b) runCmdk(+b.dataset.ck); else if (e.target.id==="cmdk") closeCmdk(); });
+document.addEventListener("keydown", e=>{ if ((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==="k"){ e.preventDefault(); $("#cmdk").hidden ? openCmdk() : closeCmdk(); } }, true);
+
+/* ---------- trace waterfall */
+const LIVE = ["running","thinking","subagents","awaiting_approval"];
+function traceModel(s){
+  const evs = (s.events||[]).slice().sort((a,b)=>a.t-b.t);
+  const turns = [];
+  evs.forEach((e,i)=>{ if (e.kind==="UserPromptSubmit") turns.push({start:e.t, prompt:e.text||"", i}); });
+  if (!turns.length && evs.length) turns.push({start:evs[0].t, prompt:"(earlier activity)", i:0});
+  turns.forEach((t,k)=>{ t.end = k+1<turns.length ? turns[k+1].start : null; });
+  return {evs, turns};
+}
+function traceCard(s){
+  const {evs, turns} = traceModel(s);
+  if (!turns.length) return `<div class="card"><div class="card-b muted">No tool calls recorded for this session yet. Each prompt becomes a waterfall of tool calls here.</div></div>`;
+  const ti = Math.min(turns.length-1, S.traceTurn ?? turns.length-1), T = turns[ti];
+  const live = LIVE.includes(effStatus(s)) && ti===turns.length-1;
+  const inTurn = evs.filter(e=>e.t>=T.start && (T.end==null || e.t<T.end));
+  const stop = inTurn.find(e=>e.kind==="Stop"||e.kind==="StopFailure");
+  const we0 = T.end ?? (live ? now() : (stop?.t ?? Math.max(T.start+1, ...inTurn.map(e=>e.t))));
+  // spans
+  const post = new Map(); inTurn.forEach(e=>{ if ((e.kind==="PostToolUse"||e.kind==="PostToolUseFailure") && e.id) post.set(e.id, e); });
+  const spans = [];
+  for (const e of inTurn){
+    if (e.kind==="PreToolUse" && e.id){
+      const p = post.get(e.id);
+      const isSub = e.tool==="Task"||e.tool==="Agent";
+      const sa = isSub ? (s.subagents||{})[e.id] : null;
+      let end = p?.t, state = p ? (p.ok===false?"fail":"done") : "open";
+      if (sa?.ended) { end = Math.max(end||0, sa.ended); state = sa.status==="failed"?"fail":"done"; }
+      if (!end){ if (live || sa?.status==="running") { end = now(); state="run"; } else end = e.t; }
+      spans.push({id:e.id, tool:e.tool, text:e.text, inp:e.inp, result:p?.result || sa?.result || "", start:e.t, end, state, agent:e.agent||null, sub:isSub, sa});
+    }
+    if (e.kind==="PermissionRequest"){
+      const d = inTurn.find(x=>x.kind==="Decision" && x.t>=e.t && x.tool===e.tool);
+      const pend = !d && (s.pending||[]).length;
+      spans.push({id:"ap-"+e.t, tool:e.tool, text:e.text, start:e.t, end:d?.t ?? (pend||live?now():e.t), state:d?(d.ok?"done":"fail"):pend?"run":"done", appr:true, decision:d?.text||"waiting", agent:null});
+    }
+  }
+  const ws = T.start, we = Math.max(we0, ...spans.map(x=>x.end), ws+1), span = we-ws;
+  // nest subagent work under its Task span
+  const kids = new Map(), roots = [];
+  for (const x of spans){ if (x.agent && spans.some(y=>y.id===x.agent)) { (kids.get(x.agent)||kids.set(x.agent,[]).get(x.agent)).push(x); } else roots.push(x); }
+  const rows = []; (function walk(list, d){ list.sort((a,b)=>a.start-b.start).forEach(x=>{ x.d=d; rows.push(x); if (kids.has(x.id)) walk(kids.get(x.id), d+1); }); })(roots, 0);
+  const pct = t => (100*(t-ws)/span);
+  const fails = spans.filter(x=>x.state==="fail" && !x.appr).length;
+  const apprWait = spans.filter(x=>x.appr).reduce((a,x)=>a+(x.end-x.start),0);
+  const sel = rows.find(x=>x.id===S.traceSel);
+  const ticks = [0,.25,.5,.75,1].map(f=>`<span style="left:${f*100}%">${f? "+"+dur(span*f) : clock(ws)}</span>`).join("");
+  const rowHtml = rows.slice(0,300).map(x=>{
+    const color = x.appr ? "var(--s-appr)" : x.sub || x.d>0 ? "var(--c3)" : "var(--c1)";
+    const L = pct(x.start), W = Math.max(.35, pct(x.end)-pct(x.start));
+    const label = x.appr ? `approval · ${x.decision}` : x.state==="run" ? "running" : dur(x.end-x.start);
+    const bar = `<div class="tr-bar ${x.sub?"sub":""} ${x.appr?"appr":""} ${x.state==="run"?"run":""} ${x.state==="fail"&&!x.appr?"fail":""}" style="--bc:${color};left:${L}%;width:${W}%"></div>`;
+    const lab = `<span class="tr-lab" style="left:${Math.min(L+W,88)}%">${esc(label)}</span>`;
+    const icn = x.appr ? "shield" : x.state==="fail" ? "x" : toolIcon(x.tool);
+    return `<div class="tr-row ${S.traceSel===x.id?"sel":""}" data-key="r-${esc(x.id)}" data-trsel="${esc(x.id)}" data-tip="${esc(toolName(x.tool))} · ${esc(x.text||"")}">
+      <div class="l" style="padding-left:${16+x.d*16}px">${x.d?`<span class="tw">└</span>`:""}${ic(icn, x.state==="fail"?'style="color:var(--s-err)"':x.appr?'style="color:var(--s-appr)"':"")}<b>${esc(x.sub?(x.sa?.type||"subagent"):toolName(x.tool))}</b><em>${esc(x.sub?(x.sa?.description||x.text):x.text||"")}</em></div>
+      <div class="r">${bar}${lab}</div></div>`;
+  }).join("");
+  const detail = sel ? `<div class="tr-detail">
+      <span class="k">Tool</span><span class="k">Started</span><span class="k">Duration</span><span class="k">Status</span><span></span>
+      <span class="v">${esc(sel.sub?`${sel.sa?.type||"subagent"} (Task)`:toolName(sel.tool))}</span><span class="v">+${dur(sel.start-ws)} · ${clock(sel.start)}</span><span class="v">${sel.state==="run"?"running…":dur(sel.end-sel.start)}</span>
+      <span class="v" style="color:${sel.state==="fail"?"var(--s-err)":sel.state==="run"?"var(--s-run)":"var(--s-idle)"}">${sel.appr?esc(sel.decision):{done:"ok",fail:"failed",run:"running",open:"no result recorded"}[sel.state]}</span><span></span>
+      ${sel.inp||sel.text?`<pre class="code">${esc(sel.inp||sel.text)}</pre>`:""}
+      ${sel.result?`<pre class="code" style="border-color:${sel.state==="fail"?"color-mix(in srgb,var(--s-err) 45%,var(--border))":"var(--border)"}">→ ${esc(sel.result)}</pre>`:""}
+    </div>` : "";
+  return `<div class="card">
+    <div class="tr-head">
+      <div class="tr-nav"><button data-trturn="${ti-1}" ${ti===0?"disabled":""} title="Previous turn">‹</button><span>turn ${ti+1}/${turns.length}</span><button data-trturn="${ti+1}" ${ti===turns.length-1?"disabled":""} title="Next turn">›</button></div>
+      <div class="tr-prompt" title="${esc(T.prompt)}">${ic("user",'style="width:13px;height:13px;vertical-align:-2px;color:var(--accent)"')} ${esc(T.prompt)}</div>
+      <div class="tr-stats"><span><b>${dur(span)}</b> ${live?"so far":"total"}</span><span><b>${spans.filter(x=>!x.appr).length}</b> calls</span>${fails?`<span class="bad"><b>${fails}</b> failed</span>`:""}${apprWait>=1?`<span class="appr"><b>${dur(apprWait)}</b> waiting on you</span>`:""}</div>
+    </div>
+    ${rows.length?`<div class="tr"><div class="tr-axis"><div class="l">${rows.length} spans${rows.length>300?" (first 300)":""}</div><div class="r">${ticks}</div></div>${rowHtml}</div>`
+      :`<div class="card-b muted">No tool calls in this turn${live?" yet":""}.</div>`}
+    ${detail}
+    <div class="tr-legend"><span><i style="background:var(--c1)"></i>Main agent</span><span><i style="background:color-mix(in srgb,var(--c3) 25%,transparent);border:1px solid var(--c3)"></i>Subagent lifetime</span><span><i style="background:var(--c3)"></i>Subagent tool</span><span><i style="background:repeating-linear-gradient(45deg,var(--s-appr) 0 3px,transparent 3px 6px)"></i>Waiting for approval</span><span><i style="background:var(--s-err)"></i>Failed</span><span class="muted">Click a row for input and result</span></div>
+  </div>`;
 }
 
 /* ---------- agent tree */
-const phase = ms => `animation-delay:-${Date.now()%ms}ms`;
+const phase = () => "";
 function toolLeaves(counts, liveTool, max){
   const e = Object.entries(counts||{}).filter(([n])=>n!=="Task"&&n!=="Agent").sort((a,b)=>b[1]-a[1]);
   const out = e.slice(0,max).map(([n,c])=>({kind:"tool", tool:n, count:c, live: liveTool===n, children:[]}));
@@ -837,7 +1163,7 @@ function treeNode(n){
     const sa=n.sa, running=sa.status==="running", end=sa.ended||now();
     const meta = running ? (sa.last_tool?`${toolName(sa.last_tool)} · ${sa.last_detail||""}`:"starting…")
       : `${sa.status} · ${sa.tools||0} tools${sa.tokens?` · ${fmtN(sa.tokens)} tok`:""} · ${dur(end-sa.started)}`;
-    return `<button class="tnode agent ${running?"running":""} ${sa.status==="failed"?"failed":""} ${S.treeSel===sa.key?"sel":""}" style="${pos};${running?phase(2000):""}" data-tsel="${esc(sa.key)}" data-tip="${esc(sa.type)}: ${esc(sa.description)}">
+    return `<button data-key="t-${esc(sa.key)}" class="tnode agent ${running?"running":""} ${sa.status==="failed"?"failed":""} ${S.treeSel===sa.key?"sel":""}" style="${pos};${running?phase(2000):""}" data-tsel="${esc(sa.key)}" data-tip="${esc(sa.type)}: ${esc(sa.description)}">
       <div class="t1">${sdot(running?"subagents":sa.status==="failed"?"error":"idle")}<span class="ty">${esc(sa.type)}</span><span class="lbl">${esc(sa.description)}</span></div>
       <div class="t2">${esc(meta)}</div></button>`;
   }
@@ -898,7 +1224,7 @@ function hotFilesCard(s){
     for (const fr of inner){
       const f = fr.item, big = fr.rw>78 && fr.rh>34, fresh = now()-f.last < 90;
       const tip = `${f.rel} · ${f.r||0} reads · ${f.e||0} edits · ${f.w||0} writes${f.sh?` (${f.sh} via shell)`:""}${f.add?` · +${f.add}/−${f.del||0} lines`:""} · ${ago(f.last)} ago`;
-      cells += `<div class="fc k-${f.kind} ${fresh?"fresh":""}" style="left:${pct(fr.rx+1,W)};top:${pct(fr.ry+1,H)};width:${pct(Math.max(0,fr.rw-2),W)};height:${pct(Math.max(0,fr.rh-2),H)};${fresh?phase(1600):""}" data-tip="${esc(tip)}" data-copypath="${esc(f.path)}">
+      cells += `<div data-key="f-${esc(f.path)}" class="fc k-${f.kind} ${fresh?"fresh":""}" style="left:${pct(fr.rx+1,W)};top:${pct(fr.ry+1,H)};width:${pct(Math.max(0,fr.rw-2),W)};height:${pct(Math.max(0,fr.rh-2),H)};${fresh?phase(1600):""}" data-tip="${esc(tip)}" data-copypath="${esc(f.path)}">
         ${big?`<b>${esc(f.name)}</b><span>${f.e?`${f.e} edit${f.e>1?"s":""} `:""}${f.w?`${f.w} write${f.w>1?"s":""} `:""}${f.r?`${f.r} read${f.r>1?"s":""}`:""}</span>`:""}</div>`;
     }
   }
@@ -1075,7 +1401,7 @@ function timeline(s){
       case "SessionEnd": icn="stop"; head="Session ended"; break;
       case "PreCompact": icn="compress"; head="Compacting context"; break;
     }
-    return `<div class="ev"><div class="ic ${cls}">${ic(icn)}</div><div style="min-width:0"><div class="h">${head}${agent}</div>
+    return `<div class="ev" data-key="e-${e.t}-${e.kind}-${esc(e.id||"")}"><div class="ic ${cls}">${ic(icn)}</div><div style="min-width:0"><div class="h">${head}${agent}</div>
       ${x?`<div class="x ${mono?"mono":""}">${x}</div>`:""}${r?`<div class="r" title="${esc(r)}">→ ${esc(r)}</div>`:""}</div><div class="tm">${clock(e.t)}</div></div>`;
   }).join("");
 }
@@ -1111,6 +1437,8 @@ function toolMix(s){
 }
 
 function renderTools(){
+  $("#btnDensity").innerHTML = ic(prefs.compact?"list":"grid"); $("#btnDensity").title = prefs.compact?"Density: compact":"Density: comfortable";
+  document.body.classList.toggle("compact", !!prefs.compact);
   const th = prefs.theme || "auto";
   $("#btnTheme").innerHTML = ic(th==="light"?"sun":th==="dark"?"moon":"sun"); $("#btnTheme").title = `Theme: ${th}`;
   $("#btnSound").innerHTML = ic(prefs.sound===false?"mute":"vol"); $("#btnSound").classList.toggle("on", prefs.sound!==false);
@@ -1120,17 +1448,21 @@ function applyTheme(){ const t=prefs.theme; if (t==="light"||t==="dark") documen
 
 /* ------------------------------------------------------------- events */
 document.addEventListener("click", e=>{
-  const t = e.target.closest("[data-sel],[data-dec],[data-tl],[data-copy],[data-dismiss],[data-am],[data-ar],[data-stab],[data-tsel],[data-fscope],[data-copypath],#navOverview,#navAccount,#seg button,#btnTheme,#btnSound,#btnNotify");
+  const t = e.target.closest("[data-trsel],[data-trturn],#btnDensity,#btnCmdk,[data-sel],[data-dec],[data-tl],[data-copy],[data-dismiss],[data-am],[data-ar],[data-stab],[data-tsel],[data-fscope],[data-copypath],#navOverview,#navAccount,#seg button,#btnTheme,#btnSound,#btnNotify");
   if (!t) return;
-  if (t.dataset.sel){ e.preventDefault(); if (S.sel!==t.dataset.sel) S.treeSel=null; S.sel=t.dataset.sel; history.replaceState(null,"","#"+encodeURIComponent(S.sel)); render(); window.scrollTo({top:0}); return; }
+  if (t.dataset.sel){ e.preventDefault(); const id=t.dataset.sel; go(()=>{ if (S.sel!==id){ S.treeSel=null; S.traceSel=null; S.traceTurn=null; } S.sel=id; history.replaceState(null,"","#"+encodeURIComponent(id)); }); window.scrollTo({top:0}); return; }
   if (t.dataset.dec) return decide(t.dataset.aid, t.dataset.dec);
   if (t.dataset.tl){ S.tl=t.dataset.tl; render(); return; }
   if (t.dataset.copy){ const s=S.sessions.get(t.dataset.copy); const cmd=`cd ${JSON.stringify(s.cwd)} && claude --resume ${s.id}`; navigator.clipboard?.writeText(cmd).then(()=>toast("Copied: "+cmd)).catch(()=>toast(cmd)); return; }
   if (t.dataset.dismiss){ api(`/api/session/${t.dataset.dismiss}/dismiss`,{method:"POST"}).then(()=>{S.sessions.delete(t.dataset.dismiss); S.sel=null; render();}); return; }
-  if (t.id==="navOverview"){ S.sel=null; S.page="overview"; history.replaceState(null,"","#"); render(); return; }
-  if (t.id==="navAccount"){ S.sel=null; S.page="account"; history.replaceState(null,"","#account"); render(); window.scrollTo({top:0}); return; }
+  if (t.id==="navOverview"){ go(()=>{ S.sel=null; S.page="overview"; history.replaceState(null,"","#"); }); return; }
+  if (t.id==="navAccount"){ go(()=>{ S.sel=null; S.page="account"; history.replaceState(null,"","#account"); }); window.scrollTo({top:0}); return; }
+  if (t.dataset.trsel){ S.traceSel = S.traceSel===t.dataset.trsel ? null : t.dataset.trsel; render(); return; }
+  if (t.dataset.trturn!=null && !t.disabled){ S.traceTurn=+t.dataset.trturn; S.traceSel=null; render(); return; }
+  if (t.id==="btnDensity"){ prefs.compact=!prefs.compact; savePrefs(); renderTools(); toast(prefs.compact?"Compact density":"Comfortable density"); return; }
+  if (t.id==="btnCmdk"){ openCmdk(); return; }
   if (t.dataset.am){ S.acctMetric=t.dataset.am; render(); return; }
-  if (t.dataset.stab){ S.stab=t.dataset.stab; render(); return; }
+  if (t.dataset.stab){ go(()=>{ S.stab=t.dataset.stab; }); return; }
   if (t.dataset.tsel){ S.treeSel = S.treeSel===t.dataset.tsel ? null : t.dataset.tsel; render(); return; }
   if (t.dataset.fscope){ S.fileScope=t.dataset.fscope; render(); return; }
   if (t.dataset.copypath){ navigator.clipboard?.writeText(t.dataset.copypath).then(()=>toast("Copied path")).catch(()=>{}); return; }
@@ -1146,7 +1478,7 @@ document.addEventListener("click", e=>{
 });
 $("#q").addEventListener("input", e=>{ S.q=e.target.value; render(); });
 document.addEventListener("keydown", e=>{
-  if (e.target.matches("input,textarea")) return;
+  if (e.target.matches("input,textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
   const a = pendingApprovals()[0];
   if (a && (e.key==="a"||e.key==="A")) { decide(a.id, e.shiftKey && a.suggestions?.length ? "always" : "allow"); }
   else if (a && e.key==="d") decide(a.id, "deny");
@@ -1160,6 +1492,7 @@ document.addEventListener("mousemove", e=>{ tip.style.left=Math.min(innerWidth-t
 
 applyTheme(); renderTools();
 setInterval(()=>{ updateTimers(); renderKpis(); }, 1000);
+setInterval(()=>{ lastSig.view=""; renderView(); }, 5000); // relative times / running bars in the main view
 setInterval(()=>{ lastSig.side=""; renderSide(); }, 15000);
 connect();
 </script>

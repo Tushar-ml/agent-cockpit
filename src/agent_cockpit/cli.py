@@ -44,9 +44,9 @@ STATE_PATH = os.path.join(BASE, "state.json")
 SETTINGS_PATH = os.path.join(CLAUDE_DIR, "settings.json")
 HOOK_MARK = "agent-cockpit/hook.py"
 DEFAULT_PORT = 7777
-__version__ = "1.2.3"
+__version__ = "1.3.0"
 
-MAX_EVENTS = 400
+MAX_EVENTS = 600
 SCAN_DAYS = 3
 
 
@@ -803,6 +803,8 @@ class Store:
                 summ = tool_summary(tname, tinput)
                 item["text"] = summ
                 item["id"] = p.get("tool_use_id")
+                if tname not in ("TodoWrite",):
+                    item["inp"] = _input_preview(tinput)
                 self.touch_file(s, tname, tinput, ts, p.get("tool_use_id"), sub["key"] if sub else None, p.get("cwd"))
                 if tname in ("Task", "Agent"):
                     key = p.get("tool_use_id") or f"t{ts}"
@@ -840,7 +842,7 @@ class Store:
                 item["ok"] = not failed
                 item["id"] = p.get("tool_use_id")
                 item["text"] = tool_summary(tname, tinput)
-                item["result"] = short(p.get("error") or response_brief(p.get("tool_response")), 300)
+                item["result"] = short(p.get("error") or response_brief(p.get("tool_response")), 600)
                 if failed:
                     s["errors"] += 1
                 # resolve any approval that the terminal already answered
@@ -1207,6 +1209,22 @@ def _iso(s):
         return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
     except Exception:
         return None
+
+
+def _input_preview(inp, limit=900):
+    """Compact, readable tool input for the trace detail panel."""
+    if not isinstance(inp, dict):
+        return ""
+    if "command" in inp:
+        return ("# " + inp["description"] + "\n" if inp.get("description") else "") + "$ " + str(inp["command"])[:limit]
+    parts = []
+    for k, v in inp.items():
+        if isinstance(v, (dict, list)):
+            v = json.dumps(v)[:300]
+        v = str(v)
+        parts.append(f"{k}: {v[:300] + ('…' if len(v) > 300 else '')}")
+    out = "\n".join(parts)
+    return out[:limit] + ("…" if len(out) > limit else "")
 
 
 def _trim_input(inp, limit=4000):
