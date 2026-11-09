@@ -261,6 +261,63 @@ table.mini td:not(:first-child),table.mini th:not(:first-child){text-align:right
 .muted{color:var(--muted)}
 .toast{position:fixed;right:20px;bottom:20px;z-index:60;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:13px;box-shadow:var(--shadow);animation:slidein .2s}
 
+/* session tabs */
+.stabs{display:flex;gap:4px;margin:18px 0 0;border-bottom:1px solid var(--border)}
+.stabs button{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;padding:9px 14px;font-weight:600;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.stabs button:hover{color:var(--text)}
+.stabs button.on{color:var(--text);border-bottom-color:var(--accent)}
+.stabs .cnt{font-size:11px;font-weight:600;padding:0 6px;border-radius:99px;background:var(--surface-3);color:var(--text-2)}
+.stabs .live-dot{width:6px;height:6px;border-radius:50%;background:var(--s-sub);animation:breathe 1.6s ease-in-out infinite}
+.tabpane{margin-top:18px}
+
+/* agent tree */
+.tree-wrap{overflow:auto;padding:18px}
+.tree{position:relative}
+.tree svg.edges{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.tree svg.edges path{fill:none;stroke:var(--border-strong);stroke-width:1.5}
+.tree svg.edges path.flow{stroke:var(--s-sub);stroke-width:2;stroke-dasharray:6 6;animation:dash 1s linear infinite}
+.tree svg.edges path.flow-run{stroke:var(--s-run);stroke-width:2;stroke-dasharray:6 6;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-12}}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--gc) 35%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--gc) 0%,transparent)}}
+.tnode{position:absolute;width:214px;height:50px;border-radius:11px;border:1px solid var(--border);background:var(--surface);padding:6px 11px;display:flex;flex-direction:column;justify-content:center;gap:2px;font-size:12px;text-align:left;box-shadow:var(--shadow)}
+.tnode .t1{display:flex;gap:6px;align-items:center;font-weight:600;white-space:nowrap;overflow:hidden;min-width:0}
+.tnode .t1 .lbl{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tnode .t1 .n{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--text-2);font-weight:600}
+.tnode .t2{color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tnode .svg{width:14px;height:14px;color:var(--text-2)}
+.tnode.session{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+.tnode.session .svg{color:var(--accent)}
+.tnode.agent{cursor:pointer;border-color:color-mix(in srgb,var(--s-sub) 40%,var(--border))}
+.tnode.agent .ty{font:600 10.5px "JetBrains Mono",monospace;color:var(--s-sub);background:color-mix(in srgb,var(--s-sub) 12%,transparent);padding:0 6px;border-radius:5px;flex:none}
+.tnode.agent.running{--gc:var(--s-sub);animation:glow 2s ease-in-out infinite}
+.tnode.agent.sel{outline:2px solid var(--s-sub);outline-offset:2px}
+.tnode.agent.failed{border-color:color-mix(in srgb,var(--s-err) 55%,var(--border))}
+.tnode.tool{background:var(--surface-2);box-shadow:none}
+.tnode.tool.live{--gc:var(--s-run);border-color:var(--s-run);animation:glow 1.6s ease-in-out infinite}
+.tnode.tool.live .svg{color:var(--s-run)}
+.tnode.more{border-style:dashed;background:transparent;box-shadow:none}
+.tree-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--text-2);padding:0 18px 14px}
+.tree-legend span{display:inline-flex;align-items:center;gap:6px}
+.tree-legend i{width:18px;height:0;border-top:2px dashed var(--s-sub)}
+.tree-legend i.solid{border-top:1.5px solid var(--border-strong)}
+.tree-legend i.run{border-top-color:var(--s-run)}
+
+/* hot files */
+.tm{position:relative;width:100%;aspect-ratio:1000/470;border-radius:10px;overflow:hidden;background:var(--surface-2)}
+.tm .grp{position:absolute;border-radius:8px;background:var(--surface-3)}
+.tm .grp .gh{position:absolute;left:8px;right:8px;top:3px;font-size:11px;font-weight:600;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm .fc{position:absolute;border-radius:6px;padding:5px 7px;overflow:hidden;cursor:pointer;background:color-mix(in srgb,var(--fc) 20%,var(--surface));border:1px solid color-mix(in srgb,var(--fc) 55%,transparent);transition:filter .12s}
+.tm .fc:hover{filter:brightness(1.12);z-index:2}
+.tm .fc b{display:block;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.tm .fc span{display:block;font-size:10.5px;color:var(--text-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.tm .fc.fresh{--gc:var(--fc);animation:glow 1.6s ease-in-out infinite}
+.k-edit{--fc:var(--c2)} .k-new{--fc:var(--c3)} .k-read{--fc:var(--c1)}
+.tm-legend{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:12px;color:var(--text-2);margin-bottom:12px}
+.tm-legend span{display:inline-flex;align-items:center;gap:6px}
+.tm-legend .sw{border:1px solid color-mix(in srgb,var(--fc) 60%,transparent);background:color-mix(in srgb,var(--fc) 30%,var(--surface))}
+.plus{color:var(--s-idle)} .minus{color:var(--s-err)}
+
 /* account */
 .acct-top{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
 .stat{padding:14px 16px}
@@ -338,7 +395,8 @@ const TOKEN = "__COCKPIT_TOKEN__";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const S = { sessions:new Map(), hosts:new Map(), approvals:new Map(), sel:null, page:"overview", filter:"active", q:"", tl:"all", connected:false, skew:0,
-  account:null, limits:{}, limitHist:{}, acctMetric:"cost", acctRange:30 };
+  account:null, limits:{}, limitHist:{}, acctMetric:"cost", acctRange:30,
+  stab:"activity", treeSel:null, fileScope:"session", projFiles:{} };
 const prefs = (()=>{ try{ return JSON.parse(localStorage.getItem("cockpit")||"{}") }catch{ return {} } })();
 const savePrefs = ()=>{ try{ localStorage.setItem("cockpit", JSON.stringify(prefs)) }catch{} };
 
@@ -683,6 +741,8 @@ function sessionView(s){
     </div>
   </div>
 
+  ${sessionTabs(s, subs)}
+  ${S.stab==="tree" ? `<div class="tabpane">${agentTreeCard(s)}</div>` : S.stab==="files" ? `<div class="tabpane">${hotFilesCard(s)}</div>` : `
   <div class="grid2">
     <div class="stack">
       <div class="card"><div class="card-h">${ic("list")}Activity
@@ -697,7 +757,160 @@ function sessionView(s){
       ${usageCard(s,u)}
       ${toolMix(s)}
     </div>
-  </div>`;
+  </div>`}`;
+}
+
+function sessionTabs(s, subs){
+  const run = subs.filter(x=>x.status==="running").length;
+  const nf = Object.keys(s.files||{}).length;
+  const t = (k, icon, label, extra) => `<button data-stab="${k}" class="${S.stab===k?"on":""}">${ic(icon)}${label}${extra||""}</button>`;
+  return `<div class="stabs">${t("activity","list","Activity")}${t("tree","bot","Agent tree", run?`<span class="live-dot" title="${run} running"></span>`: subs.length?`<span class="cnt">${subs.length}</span>`:"")}${t("files","file","Hot files", nf?`<span class="cnt">${nf}</span>`:"")}</div>`;
+}
+
+/* ---------- agent tree */
+const phase = ms => `animation-delay:-${Date.now()%ms}ms`;
+function toolLeaves(counts, liveTool, max){
+  const e = Object.entries(counts||{}).filter(([n])=>n!=="Task"&&n!=="Agent").sort((a,b)=>b[1]-a[1]);
+  const out = e.slice(0,max).map(([n,c])=>({kind:"tool", tool:n, count:c, live: liveTool===n, children:[]}));
+  if (e.length>max){ const rest=e.slice(max); out.push({kind:"more", count:rest.reduce((a,b)=>a+b[1],0), names:rest.map(r=>r[0]), children:[]}); }
+  return out;
+}
+function buildTree(s){
+  const subs = s.subagents||{};
+  const mainCounts = s.main_tool_counts || s.tool_counts || {};
+  const root = {kind:"session", s, children:[]};
+  const nodes = {};
+  for (const sa of Object.values(subs)) nodes[sa.key] = {kind:"agent", sa, children:[]};
+  const ordered = Object.values(subs).sort((a,b)=>a.started-b.started);
+  for (const sa of ordered){
+    const n = nodes[sa.key];
+    const parent = sa.parent && nodes[sa.parent] ? nodes[sa.parent] : root;
+    parent.children.push(n);
+  }
+  for (const sa of ordered){
+    const n = nodes[sa.key];
+    n.children = toolLeaves(sa.tool_counts, sa.status==="running"?sa.last_tool:null, 5).concat(n.children);
+  }
+  const mainLive = s.current && !["Task","Agent"].includes(s.current.tool) ? s.current.tool : null;
+  root.children = root.children.concat(toolLeaves(mainCounts, mainLive, 7));
+  return root;
+}
+function agentTreeCard(s){
+  const root = buildTree(s);
+  const ROW=62, COL=262, NW=214, NH=50;
+  let row=0, maxDepth=0;
+  (function lay(n,d){ n.d=d; maxDepth=Math.max(maxDepth,d);
+    if (!n.children.length){ n.y=row++*ROW; } else { n.children.forEach(c=>lay(c,d+1)); n.y=(n.children[0].y+n.children[n.children.length-1].y)/2; }
+    n.x=d*COL; })(root,0);
+  const W = maxDepth*COL+NW+4, H = Math.max(row,1)*ROW-ROW+NH+4;
+  const edges=[], boxes=[];
+  (function walk(n){
+    for (const c of n.children){
+      const x1=n.x+NW, y1=n.y+NH/2, x2=c.x, y2=c.y+NH/2, mx=(x1+x2)/2;
+      const flow = c.kind==="agent" && c.sa.status==="running" ? "flow" : (c.kind==="tool" && c.live) ? "flow-run" : "";
+      edges.push(`<path class="${flow}" d="M${x1} ${y1} C${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}" ${flow?`style="${phase(1000)}"`:""}/>`);
+      walk(c);
+    }
+    boxes.push(treeNode(n));
+  })(root);
+  const subs = Object.values(s.subagents||{});
+  const sel = S.treeSel && s.subagents?.[S.treeSel];
+  const empty = !subs.length && !Object.keys(s.main_tool_counts||s.tool_counts||{}).length;
+  return `<div class="card"><div class="card-h">${ic("bot")}Agent tree<span class="sub">${subs.filter(x=>x.status==="running").length} running · ${subs.length} subagents · ${s.tools_total||0} tool calls</span></div>
+    ${empty?`<div class="card-b muted">No tool calls yet. When Claude runs tools or spins up subagents, they branch out here live.</div>`:`
+    <div class="tree-wrap"><div class="tree" style="width:${W}px;height:${H}px">
+      <svg class="edges" width="${W}" height="${H}">${edges.join("")}</svg>${boxes.join("")}</div></div>
+    <div class="tree-legend"><span><i></i>subagent working</span><span><i class="run"></i>tool running now</span><span><i class="solid"></i>finished</span><span class="muted">Click a subagent for its brief and result</span></div>`}
+  </div>${sel?`<div class="card" style="margin-top:14px"><div class="card-h">${ic("bot")}Subagent details</div>${subagentRow(sel)}</div>`:""}`;
+}
+function treeNode(n){
+  const pos = `left:${n.x}px;top:${n.y}px`;
+  if (n.kind==="session"){
+    const s=n.s, st=effStatus(s), m=STATUS[st]||STATUS.idle;
+    return `<div class="tnode session" style="${pos}"><div class="t1">${ic("sparkle")}<span class="lbl">${esc(s.project)}</span></div>
+      <div class="t2">${sdot(st)} ${esc(m.l)} · ${esc(shortModel(s.model)||"main agent")}</div></div>`;
+  }
+  if (n.kind==="agent"){
+    const sa=n.sa, running=sa.status==="running", end=sa.ended||now();
+    const meta = running ? (sa.last_tool?`${toolName(sa.last_tool)} · ${sa.last_detail||""}`:"starting…")
+      : `${sa.status} · ${sa.tools||0} tools${sa.tokens?` · ${fmtN(sa.tokens)} tok`:""} · ${dur(end-sa.started)}`;
+    return `<button class="tnode agent ${running?"running":""} ${sa.status==="failed"?"failed":""} ${S.treeSel===sa.key?"sel":""}" style="${pos};${running?phase(2000):""}" data-tsel="${esc(sa.key)}" data-tip="${esc(sa.type)}: ${esc(sa.description)}">
+      <div class="t1">${sdot(running?"subagents":sa.status==="failed"?"error":"idle")}<span class="ty">${esc(sa.type)}</span><span class="lbl">${esc(sa.description)}</span></div>
+      <div class="t2">${esc(meta)}</div></button>`;
+  }
+  if (n.kind==="more") return `<div class="tnode tool more" style="${pos}" data-tip="${esc(n.names.map(toolName).join(", "))}"><div class="t1">${ic("zap")}<span class="lbl">${n.names.length} more tools</span><span class="n">×${n.count}</span></div></div>`;
+  return `<div class="tnode tool ${n.live?"live":""}" style="${pos};${n.live?phase(1600):""}"><div class="t1">${ic(toolIcon(n.tool))}<span class="lbl">${esc(toolName(n.tool))}</span><span class="n">×${n.count}</span></div>
+    ${n.live?`<div class="t2" style="color:var(--s-run)">running now</div>`:""}</div>`;
+}
+
+/* ---------- hot files (squarified treemap) */
+function squarify(items, x, y, w, h){
+  const out=[]; const total=items.reduce((a,b)=>a+b.v,0); if(!total||w<=0||h<=0) return out;
+  const q=items.map(d=>({d, v:d.v, a:d.v*w*h/total})); let row=[];
+  const worst=(r,len)=>{ const s=r.reduce((a,b)=>a+b.a,0), mx=Math.max(...r.map(z=>z.a)), mn=Math.min(...r.map(z=>z.a)); return Math.max(len*len*mx/(s*s), (s*s)/(len*len*mn)); };
+  const flush=()=>{ const s=row.reduce((a,b)=>a+b.a,0);
+    if (w>=h){ const cw=s/h; let yy=y; for(const r of row){ const rh=r.a/cw; out.push({item:r,rx:x,ry:yy,rw:cw,rh}); yy+=rh; } x+=cw; w-=cw; }
+    else { const rh=s/w; let xx=x; for(const r of row){ const rw=r.a/rh; out.push({item:r,rx:xx,ry:y,rw,rh}); xx+=rw; } y+=rh; h-=rh; }
+    row=[]; };
+  while(q.length){ const len=Math.min(w,h), it=q[0]; if(!row.length || worst([...row,it],len)<=worst(row,len)){ row.push(it); q.shift(); } else flush(); }
+  if (row.length) flush();
+  return out.map(o=>({...o, item:o.item.d}));
+}
+function fileData(s){
+  if (S.fileScope==="project"){
+    const c = S.projFiles[s.cwd];
+    if (!c || Date.now()-c.t>10000){
+      if (!c?.loading){ S.projFiles[s.cwd] = {...(c||{}), loading:true, t:c?.t||0};
+        api("/api/project-files?cwd="+encodeURIComponent(s.cwd)).then(d=>{ S.projFiles[s.cwd]={t:Date.now(), data:d}; schedule(); }).catch(()=>{ S.projFiles[s.cwd]={t:Date.now(), data:null}; }); }
+    }
+    return c?.data?.files || null;
+  }
+  return s.files || {};
+}
+function hotFilesCard(s){
+  const raw = fileData(s);
+  const cwd = (s.cwd||"").replace(/\/$/,"");
+  const scopeBtns = `<div class="seg2">${[["session","This session"],["project","Whole project"]].map(([k,l])=>`<button data-fscope="${k}" class="${S.fileScope===k?"on":""}">${l}</button>`).join("")}</div>`;
+  const head = `<div class="card-h">${ic("file")}Hot files<span class="sub" style="margin-left:0;margin-right:auto;padding-left:6px">${esc(homeTilde(cwd))}</span>${scopeBtns}</div>`;
+  if (raw===null) return `<div class="card">${head}<div class="card-b muted">Loading project history…</div></div>`;
+  const files = Object.entries(raw).map(([path,f])=>{
+    const inside = cwd && path.startsWith(cwd+"/");
+    const rel = inside ? path.slice(cwd.length+1) : homeTilde(path);
+    const parts = rel.split("/");
+    const group = !inside ? "outside project" : parts.length>1 ? parts[0]+"/" : "(project root)";
+    const kind = f.e>0 ? "edit" : f.w>0 ? "new" : "read";
+    return {path, rel, name:parts[parts.length-1], group, kind, ...f, v: Math.max(1,(f.r||0)+2*((f.e||0)+(f.w||0)))};
+  }).sort((a,b)=>b.v-a.v);
+  if (!files.length) return `<div class="card">${head}<div class="card-b muted">No files touched yet. Every Read, Edit and Write lands here, sized by how often Claude touched it.</div></div>`;
+  const shown = files.slice(0,160);
+  const groups = {}; for (const f of shown){ (groups[f.group] ||= {name:f.group, v:0, files:[]}); groups[f.group].v+=f.v; groups[f.group].files.push(f); }
+  const W=1000, H=470, G=3;
+  const grects = squarify(Object.values(groups).sort((a,b)=>b.v-a.v), 0, 0, W, H);
+  let cells="";
+  const pct=(v,t)=>(100*v/t).toFixed(3)+"%";
+  for (const gr of grects){
+    const g = gr.item, hdr = gr.rh>60 && gr.rw>70 ? 20 : 0;
+    cells += `<div class="grp" style="left:${pct(gr.rx+G/2,W)};top:${pct(gr.ry+G/2,H)};width:${pct(gr.rw-G,W)};height:${pct(gr.rh-G,H)}">${hdr?`<div class="gh">${esc(g.name)} · ${g.files.length}</div>`:""}</div>`;
+    const inner = squarify(g.files, gr.rx+G, gr.ry+G+hdr, gr.rw-2*G, gr.rh-2*G-hdr);
+    for (const fr of inner){
+      const f = fr.item, big = fr.rw>78 && fr.rh>34, fresh = now()-f.last < 90;
+      const tip = `${f.rel} · ${f.r||0} reads · ${f.e||0} edits · ${f.w||0} writes${f.add?` · +${f.add}/−${f.del||0} lines`:""} · ${ago(f.last)} ago`;
+      cells += `<div class="fc k-${f.kind} ${fresh?"fresh":""}" style="left:${pct(fr.rx+1,W)};top:${pct(fr.ry+1,H)};width:${pct(Math.max(0,fr.rw-2),W)};height:${pct(Math.max(0,fr.rh-2),H)};${fresh?phase(1600):""}" data-tip="${esc(tip)}" data-copypath="${esc(f.path)}">
+        ${big?`<b>${esc(f.name)}</b><span>${f.e?`${f.e} edit${f.e>1?"s":""} `:""}${f.w?`${f.w} write${f.w>1?"s":""} `:""}${f.r?`${f.r} read${f.r>1?"s":""}`:""}</span>`:""}</div>`;
+    }
+  }
+  const nE=files.filter(f=>f.kind==="edit").length, nN=files.filter(f=>f.kind==="new").length, nR=files.filter(f=>f.kind==="read").length;
+  const top = files.slice(0,12);
+  return `<div class="card">${head}<div class="card-b">
+    <div class="tm-legend"><span class="k-edit"><i class="sw"></i>Edited · ${nE}</span><span class="k-new"><i class="sw"></i>Created · ${nN}</span><span class="k-read"><i class="sw"></i>Read only · ${nR}</span>
+      <span class="muted" style="margin-left:auto">Size = reads + 2× edits/writes · glowing = touched in the last 90s · click to copy path</span></div>
+    <div class="tm" role="img" aria-label="Treemap of files touched">${cells}</div>
+    ${files.length>shown.length?`<div class="note">Showing the ${shown.length} hottest of ${files.length} files.</div>`:""}
+  </div>
+  <div class="tblwrap"><table class="tbl"><tr><th>File</th><th class="num">Reads</th><th class="num">Edits</th><th class="num">Writes</th><th class="num">Lines</th><th class="num">Last touched</th></tr>
+    ${top.map(f=>`<tr><td title="${esc(f.path)}"><span class="sw k-${f.kind}" style="display:inline-block;margin-right:8px;background:var(--fc)"></span>${esc(f.rel)}</td><td class="num">${f.r||0}</td><td class="num">${f.e||0}</td><td class="num">${f.w||0}</td>
+      <td class="num">${f.add?`<span class="plus">+${f.add}</span> <span class="minus">−${f.del||0}</span>`:""}</td><td class="num">${ago(f.last)} ago</td></tr>`).join("")}
+  </table></div></div>`;
 }
 
 const money = v => { v=+v||0; if (v===0) return "$0"; return v>=1000?"$"+(v/1000).toFixed(1)+"k": v>=100?"$"+v.toFixed(0): v>=1?"$"+v.toFixed(2): "$"+v.toFixed(3); };
@@ -904,9 +1117,9 @@ function applyTheme(){ const t=prefs.theme; if (t==="light"||t==="dark") documen
 
 /* ------------------------------------------------------------- events */
 document.addEventListener("click", e=>{
-  const t = e.target.closest("[data-sel],[data-dec],[data-tl],[data-copy],[data-dismiss],[data-am],[data-ar],#navOverview,#navAccount,#seg button,#btnTheme,#btnSound,#btnNotify");
+  const t = e.target.closest("[data-sel],[data-dec],[data-tl],[data-copy],[data-dismiss],[data-am],[data-ar],[data-stab],[data-tsel],[data-fscope],[data-copypath],#navOverview,#navAccount,#seg button,#btnTheme,#btnSound,#btnNotify");
   if (!t) return;
-  if (t.dataset.sel){ e.preventDefault(); S.sel=t.dataset.sel; history.replaceState(null,"","#"+encodeURIComponent(S.sel)); render(); window.scrollTo({top:0}); return; }
+  if (t.dataset.sel){ e.preventDefault(); if (S.sel!==t.dataset.sel) S.treeSel=null; S.sel=t.dataset.sel; history.replaceState(null,"","#"+encodeURIComponent(S.sel)); render(); window.scrollTo({top:0}); return; }
   if (t.dataset.dec) return decide(t.dataset.aid, t.dataset.dec);
   if (t.dataset.tl){ S.tl=t.dataset.tl; render(); return; }
   if (t.dataset.copy){ const s=S.sessions.get(t.dataset.copy); const cmd=`cd ${JSON.stringify(s.cwd)} && claude --resume ${s.id}`; navigator.clipboard?.writeText(cmd).then(()=>toast("Copied: "+cmd)).catch(()=>toast(cmd)); return; }
@@ -914,6 +1127,10 @@ document.addEventListener("click", e=>{
   if (t.id==="navOverview"){ S.sel=null; S.page="overview"; history.replaceState(null,"","#"); render(); return; }
   if (t.id==="navAccount"){ S.sel=null; S.page="account"; history.replaceState(null,"","#account"); render(); window.scrollTo({top:0}); return; }
   if (t.dataset.am){ S.acctMetric=t.dataset.am; render(); return; }
+  if (t.dataset.stab){ S.stab=t.dataset.stab; render(); return; }
+  if (t.dataset.tsel){ S.treeSel = S.treeSel===t.dataset.tsel ? null : t.dataset.tsel; render(); return; }
+  if (t.dataset.fscope){ S.fileScope=t.dataset.fscope; render(); return; }
+  if (t.dataset.copypath){ navigator.clipboard?.writeText(t.dataset.copypath).then(()=>toast("Copied path")).catch(()=>{}); return; }
   if (t.dataset.ar){ S.acctRange=+t.dataset.ar; render(); return; }
   if (t.parentElement?.id==="seg"){ S.filter=t.dataset.f; document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",b===t)); render(); return; }
   if (t.id==="btnTheme"){ const order=["auto","dark","light"]; prefs.theme=order[(order.indexOf(prefs.theme||"auto")+1)%3]; savePrefs(); applyTheme(); renderTools(); toast("Theme: "+prefs.theme); return; }

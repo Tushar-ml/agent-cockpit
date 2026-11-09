@@ -153,6 +153,29 @@ class SmokeTest(unittest.TestCase):
         # account totals include usage from hook events (test_lifecycle wrote 1 Opus 5.5 response)
         self.assertIn("models", st["account"])
 
+    def test_agent_tree_and_files(self):
+        b = {"session_id": "s6", "cwd": "/tmp/p6"}
+        self.hook({**b, "hook_event_name": "PreToolUse", "tool_name": "Read", "tool_use_id": "r1", "tool_input": {"file_path": "/tmp/p6/a.py"}})
+        self.hook({**b, "hook_event_name": "PreToolUse", "tool_name": "Read", "tool_use_id": "r1", "tool_input": {"file_path": "/tmp/p6/a.py"}})  # duplicate id
+        self.hook({**b, "hook_event_name": "PreToolUse", "tool_name": "Edit", "tool_use_id": "e1",
+                   "tool_input": {"file_path": "/tmp/p6/a.py", "old_string": "x", "new_string": "y\nz"}})
+        self.hook({**b, "hook_event_name": "PreToolUse", "tool_name": "Task", "tool_use_id": "t1",
+                   "tool_input": {"subagent_type": "Plan", "description": "outer", "prompt": "p"}})
+        self.hook({**b, "hook_event_name": "SubagentStart", "agent_id": "A", "agent_type": "Plan"})
+        self.hook({**b, "hook_event_name": "PreToolUse", "agent_id": "A", "tool_name": "Task", "tool_use_id": "t2",
+                   "tool_input": {"subagent_type": "Explore", "description": "inner", "prompt": "p"}})
+        self.hook({**b, "hook_event_name": "PreToolUse", "agent_id": "A", "tool_name": "Write", "tool_use_id": "w1",
+                   "tool_input": {"file_path": "/tmp/p6/new.md", "content": "x"}})
+        s = self.session("s6")
+        f = s["files"]["/tmp/p6/a.py"]
+        self.assertEqual((f["r"], f["e"], f["add"], f["del"]), (1, 1, 2, 1))
+        self.assertEqual(s["files"]["/tmp/p6/new.md"]["agents"], ["t1"])
+        self.assertEqual(s["subagents"]["t2"]["parent"], "t1")
+        self.assertEqual(s["subagents"]["t1"]["tool_counts"], {"Task": 1, "Write": 1})
+        self.assertEqual(s["main_tool_counts"], {"Read": 2, "Edit": 1, "Task": 1})  # counts events; file tracking dedupes by id
+        pf = self.api("GET", "/api/project-files?cwd=/tmp/p6")
+        self.assertEqual(set(pf["files"]), {"/tmp/p6/a.py", "/tmp/p6/new.md"})
+
     def test_pricing(self):
         sys.path.insert(0, PKG)
         import cli

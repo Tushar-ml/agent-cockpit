@@ -44,7 +44,7 @@ STATE_PATH = os.path.join(BASE, "state.json")
 SETTINGS_PATH = os.path.join(CLAUDE_DIR, "settings.json")
 HOOK_MARK = "agent-cockpit/hook.py"
 DEFAULT_PORT = 7777
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 
 MAX_EVENTS = 400
 SCAN_DAYS = 3
@@ -176,6 +176,16 @@ def _empty_account():
     return {"v": ACCOUNT_VERSION, "daily": {}, "models": {}, "projects": {}, "hosts": {}, "first": None, "last": None}
 
 
+FILE_TOOLS = {"Read": "r", "Edit": "e", "MultiEdit": "e", "Write": "w", "NotebookEdit": "e"}
+MAX_FILES = 600
+
+
+def _file_path(inp):
+    if not isinstance(inp, dict):
+        return ""
+    return inp.get("file_path") or inp.get("notebook_path") or ""
+
+
 # ============================================================== state ======
 
 class Store:
@@ -188,6 +198,7 @@ class Store:
         self.clients = []
         self.scan_offsets = {}
         self.seen_usage = {}  # sid -> set(msg ids)
+        self.seen_tools = {}  # sid -> set(tool_use ids) for file tracking dedupe (hook + transcript)
         self.account = _empty_account()
         self.acct_ids = set()
         self.acct_dirty = False
@@ -207,11 +218,14 @@ class Store:
             self.hosts = d.get("hosts", {})
             for sid, s in self.sessions.items():
                 self.seen_usage[sid] = set(s.pop("_usage_ids", []))
+                self.seen_tools[sid] = set(s.pop("_tool_ids", []))
                 if s.get("status") in ("running", "thinking", "awaiting_approval", "subagents"):
                     s["status"] = "idle"
                     s["status_detail"] = "Dashboard restarted — waiting for next event"
                 s["pending"] = []
             self.scan_offsets = d.get("scan_offsets", {})
+            if d.get("files_v") != 1:
+                self.scan_offsets = {}  # re-read recent transcripts once to pick up file history (usage is deduped)
             self.limits = d.get("limits", {})
             self.limit_hist = d.get("limit_hist", {})
             acct = d.get("account") or {}
@@ -238,10 +252,11 @@ class Store:
                     continue
                 c = dict(s)
                 c["_usage_ids"] = list(self.seen_usage.get(sid, ()))[-5000:]
+                c["_tool_ids"] = list(self.seen_tools.get(sid, ()))[-5000:]
                 sess[sid] = c
             data = {"sessions": sess, "hosts": self.hosts, "scan_offsets": self.scan_offsets,
                     "account": self.account, "acct_ids": list(self.acct_ids),
-                    "limits": self.limits, "limit_hist": self.limit_hist}
+                    "limits": self.limits, "limit_hist": self.limit_hist, "files_v": 1}
             self.dirty = False
         tmp = STATE_PATH + ".tmp"
         with open(tmp, "w") as f:
@@ -450,6 +465,46 @@ class Store:
             s["cc_version"] = p.get("version") or s.get("cc_version")
             self.push_session(s)
 
+    def touch_file(self, s, tool, inp, ts, tool_id=None, agent=None):
+        kind = FILE_TOOLS.get(tool)
+        path = _file_path(inp)
+        if not kind or not path:
+            return
+        if tool_id:
+            seen = self.seen_tools.setdefault(s["id"], set())
+            if tool_id in seen:
+                return
+            seen.add(tool_id)
+        files = s.setdefault("files", {})
+        f = files.get(path)
+        if not f:
+            if len(files) >= MAX_FILES:  # evict the least recently touched
+                old = min(files, key=lambda k: files[k]["last"])
+                files.pop(old, None)
+            f = files[path] = {"r": 0, "e": 0, "w": 0, "last": 0, "agents": []}
+        f[kind] += 1
+        f["last"] = max(f["last"], ts)
+        if kind == "e":
+            old_s, new_s = inp.get("old_string"), inp.get("new_string")
+            if isinstance(old_s, str) and isinstance(new_s, str):
+                f["add"] = f.get("add", 0) + new_s.count("\n") + 1
+                f["del"] = f.get("del", 0) + old_s.count("\n") + 1
+        if agent and agent not in f["agents"] and len(f["agents"]) < 8:
+            f["agents"].append(agent)
+
+    def project_files(self, cwd):
+        out = {}
+        with self.lock:
+            sessions = [x for x in self.sessions.values() if x.get("cwd") == cwd]
+            for x in sessions:
+                for path, f in (x.get("files") or {}).items():
+                    o = out.setdefault(path, {"r": 0, "e": 0, "w": 0, "last": 0, "add": 0, "del": 0, "sessions": 0})
+                    for k in ("r", "e", "w", "add", "del"):
+                        o[k] += f.get(k, 0)
+                    o["last"] = max(o["last"], f.get("last", 0))
+                    o["sessions"] += 1
+        return {"cwd": cwd, "sessions": len(sessions), "files": out}
+
     def add_event(self, s, ev):
         s["events"].append(ev)
         if len(s["events"]) > MAX_EVENTS:
@@ -519,9 +574,11 @@ class Store:
                 summ = tool_summary(tname, tinput)
                 item["text"] = summ
                 item["id"] = p.get("tool_use_id")
+                self.touch_file(s, tname, tinput, ts, p.get("tool_use_id"), sub["key"] if sub else None)
                 if tname in ("Task", "Agent"):
                     key = p.get("tool_use_id") or f"t{ts}"
                     s["subagents"][key] = {
+                        "parent": sub["key"] if sub else None, "tool_counts": {},
                         "key": key, "type": tinput.get("subagent_type") or "general-purpose",
                         "description": tinput.get("description", ""), "prompt": short(tinput.get("prompt", ""), 1200),
                         "status": "running", "started": ts, "ended": None, "tools": 0, "last_tool": "",
@@ -534,8 +591,11 @@ class Store:
                     sub["tools"] += 1
                     sub["last_tool"] = tname
                     sub["last_detail"] = summ
+                    sub.setdefault("tool_counts", {})[tname] = sub.get("tool_counts", {}).get(tname, 0) + 1
                     item["agent"] = sub["key"]
                 else:
+                    mt = s.setdefault("main_tool_counts", {})
+                    mt[tname] = mt.get(tname, 0) + 1
                     s["current"] = {"tool": tname, "summary": summ, "since": ts, "id": p.get("tool_use_id"), "input": _trim_input(tinput)}
                     if tname == "AskUserQuestion":
                         s["question"] = tinput.get("questions")
@@ -820,6 +880,10 @@ class Store:
                 c = msg.get("content")
                 if isinstance(c, str) and c.strip() and not c.startswith("<"):
                     meta["prompt"] = c
+            if t == "assistant" and not history_only and isinstance(msg.get("content"), list):
+                for blk in msg["content"]:
+                    if isinstance(blk, dict) and blk.get("type") == "tool_use" and blk.get("name") in FILE_TOOLS:
+                        meta.setdefault("files", []).append((blk.get("name"), blk.get("input") or {}, _iso(o.get("timestamp")) or mtime, blk.get("id")))
             if t == "assistant" and isinstance(msg.get("usage"), dict) and msg.get("model") != "<synthetic>":
                 u = msg["usage"]
                 mid = msg.get("id") or o.get("uuid")
@@ -862,6 +926,8 @@ class Store:
                 s["prompt"] = meta["prompt"]
             if s["source"] == "scan":
                 s["last_ts"] = max(s["last_ts"], _iso(meta.get("last")) or mtime)
+            for tool, inp, fts, tid in meta.get("files", []):
+                self.touch_file(s, tool, inp, fts, tid, "subagent" if side else None)
             self.add_usage(s, list(usage.values()))
             self.push_session(s)
 
@@ -984,6 +1050,9 @@ class Handler(BaseHTTPRequestHandler):
             q = urllib.parse.parse_qs(u.query)
             to = min(30, max(1, int((q.get("timeout") or ["25"])[0])))
             return self._send(200, STORE.wait_approval(m.group(1), to))
+        if path == "/api/project-files":
+            q = urllib.parse.parse_qs(u.query)
+            return self._send(200, STORE.project_files((q.get("cwd") or [""])[0]))
         m = re.match(r"^/api/session/([\w-]+)/events$", path)
         if m:
             s = STORE.sessions.get(m.group(1))

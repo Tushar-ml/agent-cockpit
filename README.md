@@ -11,6 +11,8 @@ A live dashboard for every Claude Code session you run, on your laptop and on an
 - **Current work**: the running tool with the full command or edit diff, your last prompt, Claude's last reply, and the task list.
 - **Subagents**: type, task brief, current tool, tool calls, tokens, duration and result.
 - **Usage per session**: input, cache read/write and output tokens, session cost, lines changed, a context-window gauge, tokens per hour over 24 h, and per-model and per-tool breakdowns.
+- **Agent tree**: a live graph of each session. The main agent branches into its subagents (nested ones too), and each agent into the tools it used, with counts. Subagents that are working glow, their edges animate, and the tool running right now is highlighted. Click a subagent to see its brief and result.
+- **Hot files**: a treemap of every file Claude read, edited or created, grouped by folder and sized by how often it was touched. Files touched in the last 90 seconds glow. You can view one session or the whole project across sessions, with lines added and removed. File history from local transcripts is included.
 - **Account usage**: your plan's **5-hour and weekly limits** (percent used, reset countdown, trend) and any gateway spend limit. Also today / 7-day / 30-day / all-time token usage and API-equivalent cost, a daily chart, and breakdowns by model, project and machine. Covers every transcript on the machine plus every remote machine reporting in.
 - **Machines**: local and remote hosts grouped, with an SSH badge and the source IP. Sessions from the last 3 days are picked up from local transcripts.
 
