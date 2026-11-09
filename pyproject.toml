@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-cockpit"
+version = "1.0.0"
+description = "Live dashboard for Claude Code: status, approvals, subagents and token usage across your laptop and SSH machines"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Tushar Goel" }]
+requires-python = ">=3.8"
+dependencies = []
+keywords = ["claude", "claude-code", "dashboard", "hooks", "anthropic", "agents"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Environment :: Web Environment",
+]
+
+[project.urls]
+Homepage = "https://github.com/Tushar-ml/agent-cockpit"
+
+[project.scripts]
+agent-cockpit = "agent_cockpit.cli:main"
+cockpit = "agent_cockpit.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+agent_cockpit = ["web/*.html"]

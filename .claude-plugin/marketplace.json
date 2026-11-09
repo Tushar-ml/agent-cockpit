@@ -1,0 +1,14 @@
+{
+  "name": "agent-cockpit",
+  "owner": { "name": "Tushar Goel", "url": "https://github.com/Tushar-ml" },
+  "metadata": { "description": "Agent Cockpit: a live dashboard for every Claude Code session." },
+  "plugins": [
+    {
+      "name": "agent-cockpit",
+      "source": "./",
+      "description": "Live dashboard for Claude Code: status, browser approvals, subagents, current work and token usage across local and SSH machines.",
+      "version": "1.0.0",
+      "category": "productivity"
+    }
+  ]
+}
