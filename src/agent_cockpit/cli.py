@@ -44,7 +44,7 @@ STATE_PATH = os.path.join(BASE, "state.json")
 SETTINGS_PATH = os.path.join(CLAUDE_DIR, "settings.json")
 HOOK_MARK = "agent-cockpit/hook.py"
 DEFAULT_PORT = 7777
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 
 MAX_EVENTS = 400
 SCAN_DAYS = 3
@@ -180,6 +180,177 @@ FILE_TOOLS = {"Read": "r", "Edit": "e", "MultiEdit": "e", "Write": "w", "Noteboo
 MAX_FILES = 600
 
 
+_HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][\w-]*)\1")
+_SEGMENT_BREAK = {"&&", "||", ";", "|", "&", "(", ")"}
+_READERS = {"cat", "head", "tail", "less", "more", "wc", "bat", "nl"}
+_PREFIXES = {"sudo", "env", "time", "command", "nohup", "exec"}
+_PY_ASSIGN = re.compile(r"\b([A-Za-z_]\w*)\s*=\s*(['\"])([^'\"\n]+)\2")
+_PY_OPEN_W = re.compile(r"open\(\s*(?:(['\"])([^'\"\n]+)\1|([A-Za-z_]\w*))\s*,\s*['\"]([wax])")
+_PY_WRITE_TEXT = re.compile(r"Path\(\s*(['\"])([^'\"\n]+)\1\s*\)\.write_(?:text|bytes)")
+
+
+def _looks_like_path(t):
+    return (bool(t) and not t.startswith("-") and len(t) < 400 and not any(c in t for c in "*?$`{}\n")
+            and not t.startswith("/dev/") and not t.isdigit() and ("." in t or "/" in t))
+
+
+def _resolve(t, base):
+    t = os.path.expanduser(t)
+    return os.path.normpath(t if os.path.isabs(t) else os.path.join(base or "/", t))
+
+
+def _split_heredocs(cmd):
+    """Return [(line, [heredoc bodies])] with heredoc bodies cut out of the shell text."""
+    out, lines, i = [], cmd.split("\n"), 0
+    while i < len(lines):
+        line = lines[i]
+        delims = [m.group(2) for m in _HEREDOC.finditer(line)]
+        bodies = []
+        i += 1
+        for d in delims:
+            body = []
+            while i < len(lines) and lines[i].strip() != d:
+                body.append(lines[i])
+                i += 1
+            i += 1
+            bodies.append("\n".join(body))
+        out.append((line, bodies))
+    return out
+
+
+def _python_writes(code, base):
+    names = {m.group(1): m.group(3) for m in _PY_ASSIGN.finditer(code)}
+    found = []
+    for m in _PY_OPEN_W.finditer(code):
+        target = m.group(2) or names.get(m.group(3) or "")
+        if target and _looks_like_path(target):
+            found.append((_resolve(target, base), "w" if m.group(4) in "wx" else "e"))
+    for m in _PY_WRITE_TEXT.finditer(code):
+        if _looks_like_path(m.group(2)):
+            found.append((_resolve(m.group(2), base), "w"))
+    # a file that was also read in the same script (read-modify-write) is an edit, not a create
+    return [(pth, "e" if k == "w" and re.search(r"open\(\s*(?:['\"]" + re.escape(os.path.basename(pth)) + r"|\w+\s*\))\.read", code) else k)
+            for pth, k in found]
+
+
+def shell_file_ops(cmd, cwd, verify_python=False):
+    """Best-effort: which files does a shell command write ('w' create/overwrite, 'e' modify) or read ('r')?
+    Covers redirects, tee, sed -i, perl -i, cp/mv/touch, cat/head/tail, and python -c / heredoc open(..., 'w')."""
+    import shlex
+    ops, base = [], cwd
+    for line, bodies in _split_heredocs(cmd or ""):
+        try:
+            lx = shlex.shlex(line, posix=True, punctuation_chars=";&|()<>")
+            lx.whitespace_split = True
+            lx.commenters = ""
+            toks = list(lx)
+        except ValueError:
+            continue
+        segs, cur = [], []
+        for t in toks:
+            if t in _SEGMENT_BREAK:
+                if cur:
+                    segs.append(cur)
+                cur = []
+            else:
+                cur.append(t)
+        if cur:
+            segs.append(cur)
+        for seg in segs:
+            words, j = [], 0
+            while j < len(seg):  # pull out redirections
+                t = seg[j]
+                if t in (">", ">>", "&>", ">|") or (t.endswith(">") and t[:-1].isdigit()) or t.endswith(">>") and t[:-2].isdigit():
+                    tgt = seg[j + 1] if j + 1 < len(seg) else ""
+                    if tgt in (">", "&") and j + 2 < len(seg):  # 2>&1 style
+                        j += 3
+                        continue
+                    if _looks_like_path(tgt) and not t[:1].isdigit():
+                        ops.append((_resolve(tgt, base), "e" if t.endswith(">>") else "w"))
+                    j += 2
+                    continue
+                if t in ("<", "<<", "<<<", "<<-"):
+                    j += 2
+                    continue
+                words.append(t)
+                j += 1
+            while words and ("=" in words[0] and not words[0].startswith("-") or words[0] in _PREFIXES):
+                words = words[1:]
+            if not words:
+                continue
+            prog, args = os.path.basename(words[0]), words[1:]
+            if prog == "cd" and args:
+                base = _resolve(args[0], base)
+            elif prog == "tee":
+                kind = "e" if "-a" in args or "--append" in args else "w"
+                ops += [(_resolve(a, base), kind) for a in args if _looks_like_path(a)]
+            elif prog in ("sed", "gsed") and any(a.startswith("-i") or a == "--in-place" for a in args):
+                rest, script_seen, k = [], any(a in ("-e", "--expression") for a in args), 0
+                while k < len(args):
+                    a = args[k]
+                    if a in ("-e", "--expression", "-f"):
+                        k += 2
+                        continue
+                    if a == "-i" and k + 1 < len(args) and args[k + 1] == "":
+                        k += 2
+                        continue
+                    if a.startswith("-"):
+                        k += 1
+                        continue
+                    if not script_seen:
+                        script_seen = True
+                    else:
+                        rest.append(a)
+                    k += 1
+                ops += [(_resolve(a, base), "e") for a in rest if _looks_like_path(a)]
+            elif prog == "perl" and any(a.startswith("-") and "i" in a and not a.startswith("--") for a in args):
+                rest, script_seen, k = [], any(a in ("-e", "-E") for a in args), 0
+                while k < len(args):
+                    a = args[k]
+                    if a in ("-e", "-E"):
+                        k += 2
+                        continue
+                    if a.startswith("-"):
+                        k += 1
+                        continue
+                    if not script_seen:
+                        script_seen = True
+                    else:
+                        rest.append(a)
+                    k += 1
+                ops += [(_resolve(a, base), "e") for a in rest if _looks_like_path(a)]
+            elif prog in ("cp", "mv", "install") and len([a for a in args if not a.startswith("-")]) >= 2:
+                pos = [a for a in args if not a.startswith("-")]
+                dest = pos[-1]
+                if not _looks_like_path(dest) and dest not in (".", ".."):
+                    continue
+                dpath = _resolve(dest, base)
+                for src in pos[:-1]:
+                    if not _looks_like_path(src):
+                        continue
+                    target = os.path.join(dpath, os.path.basename(src)) if dest.endswith("/") or dest in (".", "..") or os.path.isdir(dpath) else dpath
+                    ops.append((target, "w"))
+                    if prog == "cp":
+                        ops.append((_resolve(src, base), "r"))
+            elif prog == "touch":
+                ops += [(_resolve(a, base), "w") for a in args if _looks_like_path(a)]
+            elif prog in _READERS:
+                ops += [(_resolve(a, base), "r") for a in args if _looks_like_path(a)]
+            elif prog.startswith("python"):
+                code = "\n".join(bodies)
+                if "-c" in args and args.index("-c") + 1 < len(args):
+                    code += "\n" + args[args.index("-c") + 1]
+                if code:
+                    # python heuristics can match string literals; when replaying transcripts, keep only real files
+                    ops += [o for o in _python_writes(code, base) if not verify_python or os.path.exists(o[0])]
+    seen, out = set(), []
+    for pth, k in ops:  # one entry per (path, kind) per command
+        if (pth, k) not in seen:
+            seen.add((pth, k))
+            out.append((pth, k))
+    return out
+
+
 def _file_path(inp):
     if not isinstance(inp, dict):
         return ""
@@ -224,7 +395,7 @@ class Store:
                     s["status_detail"] = "Dashboard restarted — waiting for next event"
                 s["pending"] = []
             self.scan_offsets = d.get("scan_offsets", {})
-            if d.get("files_v") != 1:
+            if d.get("files_v") != 2:
                 self.scan_offsets = {}  # re-read recent transcripts once to pick up file history (usage is deduped)
             self.limits = d.get("limits", {})
             self.limit_hist = d.get("limit_hist", {})
@@ -256,7 +427,7 @@ class Store:
                 sess[sid] = c
             data = {"sessions": sess, "hosts": self.hosts, "scan_offsets": self.scan_offsets,
                     "account": self.account, "acct_ids": list(self.acct_ids),
-                    "limits": self.limits, "limit_hist": self.limit_hist, "files_v": 1}
+                    "limits": self.limits, "limit_hist": self.limit_hist, "files_v": 2}
             self.dirty = False
         tmp = STATE_PATH + ".tmp"
         with open(tmp, "w") as f:
@@ -465,16 +636,26 @@ class Store:
             s["cc_version"] = p.get("version") or s.get("cc_version")
             self.push_session(s)
 
-    def touch_file(self, s, tool, inp, ts, tool_id=None, agent=None):
-        kind = FILE_TOOLS.get(tool)
-        path = _file_path(inp)
-        if not kind or not path:
+    def touch_file(self, s, tool, inp, ts, tool_id=None, agent=None, cwd=None, replay=False):
+        if tool == "Bash":
+            try:
+                ops = shell_file_ops((inp or {}).get("command", ""), cwd or s.get("cwd") or "/", verify_python=replay)
+            except Exception:
+                ops = []
+        else:
+            kind, path = FILE_TOOLS.get(tool), _file_path(inp)
+            ops = [(path, kind)] if kind and path else []
+        if not ops:
             return
         if tool_id:
             seen = self.seen_tools.setdefault(s["id"], set())
             if tool_id in seen:
                 return
             seen.add(tool_id)
+        for path, kind in ops:
+            self._touch_one(s, path, kind, inp if tool != "Bash" else {}, ts, agent, via_shell=tool == "Bash")
+
+    def _touch_one(self, s, path, kind, inp, ts, agent, via_shell=False):
         files = s.setdefault("files", {})
         f = files.get(path)
         if not f:
@@ -484,6 +665,8 @@ class Store:
             f = files[path] = {"r": 0, "e": 0, "w": 0, "last": 0, "agents": []}
         f[kind] += 1
         f["last"] = max(f["last"], ts)
+        if via_shell:
+            f["sh"] = f.get("sh", 0) + 1
         if kind == "e":
             old_s, new_s = inp.get("old_string"), inp.get("new_string")
             if isinstance(old_s, str) and isinstance(new_s, str):
@@ -574,7 +757,7 @@ class Store:
                 summ = tool_summary(tname, tinput)
                 item["text"] = summ
                 item["id"] = p.get("tool_use_id")
-                self.touch_file(s, tname, tinput, ts, p.get("tool_use_id"), sub["key"] if sub else None)
+                self.touch_file(s, tname, tinput, ts, p.get("tool_use_id"), sub["key"] if sub else None, p.get("cwd"))
                 if tname in ("Task", "Agent"):
                     key = p.get("tool_use_id") or f"t{ts}"
                     s["subagents"][key] = {
@@ -882,8 +1065,8 @@ class Store:
                     meta["prompt"] = c
             if t == "assistant" and not history_only and isinstance(msg.get("content"), list):
                 for blk in msg["content"]:
-                    if isinstance(blk, dict) and blk.get("type") == "tool_use" and blk.get("name") in FILE_TOOLS:
-                        meta.setdefault("files", []).append((blk.get("name"), blk.get("input") or {}, _iso(o.get("timestamp")) or mtime, blk.get("id")))
+                    if isinstance(blk, dict) and blk.get("type") == "tool_use" and (blk.get("name") in FILE_TOOLS or blk.get("name") == "Bash"):
+                        meta.setdefault("files", []).append((blk.get("name"), blk.get("input") or {}, _iso(o.get("timestamp")) or mtime, blk.get("id"), o.get("cwd")))
             if t == "assistant" and isinstance(msg.get("usage"), dict) and msg.get("model") != "<synthetic>":
                 u = msg["usage"]
                 mid = msg.get("id") or o.get("uuid")
@@ -926,8 +1109,8 @@ class Store:
                 s["prompt"] = meta["prompt"]
             if s["source"] == "scan":
                 s["last_ts"] = max(s["last_ts"], _iso(meta.get("last")) or mtime)
-            for tool, inp, fts, tid in meta.get("files", []):
-                self.touch_file(s, tool, inp, fts, tid, "subagent" if side else None)
+            for tool, inp, fts, tid, lcwd in meta.get("files", []):
+                self.touch_file(s, tool, inp, fts, tid, "subagent" if side else None, lcwd, replay=True)
             self.add_usage(s, list(usage.values()))
             self.push_session(s)
 

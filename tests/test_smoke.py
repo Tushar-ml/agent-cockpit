@@ -176,6 +176,21 @@ class SmokeTest(unittest.TestCase):
         pf = self.api("GET", "/api/project-files?cwd=/tmp/p6")
         self.assertEqual(set(pf["files"]), {"/tmp/p6/a.py", "/tmp/p6/new.md"})
 
+    def test_shell_file_ops(self):
+        sys.path.insert(0, PKG)
+        import cli
+        f = cli.shell_file_ops
+        self.assertEqual(f("cat > docs/a.md <<'EOF'\nx > fake.md\nEOF", "/r"), [("/r/docs/a.md", "w")])
+        self.assertEqual(f("cd /r && perl -pi -e 's/a/b/' README.md", "/x"), [("/r/README.md", "e")])
+        self.assertEqual(f("sed -i '' 's/a/b/' notes.md", "/r"), [("/r/notes.md", "e")])
+        self.assertEqual(f("echo x >> log.md 2>/dev/null && head -5 README.md", "/r"), [("/r/log.md", "e"), ("/r/README.md", "r")])
+        self.assertEqual(f("python3 - <<'EOF'\np='README.md'\ns=open(p).read()\nopen(p,'w').write(s)\nEOF", "/r"), [("/r/README.md", "e")])
+        self.assertEqual(f("git commit -m 'msg > x.md'", "/r"), [])
+        # live hook path: markdown edited through Bash shows up in Hot files
+        self.hook({"session_id": "s7", "cwd": "/tmp/p7", "hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_use_id": "b1",
+                   "tool_input": {"command": "cat > NOTES.md <<'EOF'\nhi\nEOF"}})
+        self.assertEqual(self.session("s7")["files"]["/tmp/p7/NOTES.md"]["w"], 1)
+
     def test_pricing(self):
         sys.path.insert(0, PKG)
         import cli

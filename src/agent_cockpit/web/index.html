@@ -897,7 +897,7 @@ function hotFilesCard(s){
     const inner = squarify(g.files, gr.rx+G, gr.ry+G+hdr, gr.rw-2*G, gr.rh-2*G-hdr);
     for (const fr of inner){
       const f = fr.item, big = fr.rw>78 && fr.rh>34, fresh = now()-f.last < 90;
-      const tip = `${f.rel} · ${f.r||0} reads · ${f.e||0} edits · ${f.w||0} writes${f.add?` · +${f.add}/−${f.del||0} lines`:""} · ${ago(f.last)} ago`;
+      const tip = `${f.rel} · ${f.r||0} reads · ${f.e||0} edits · ${f.w||0} writes${f.sh?` (${f.sh} via shell)`:""}${f.add?` · +${f.add}/−${f.del||0} lines`:""} · ${ago(f.last)} ago`;
       cells += `<div class="fc k-${f.kind} ${fresh?"fresh":""}" style="left:${pct(fr.rx+1,W)};top:${pct(fr.ry+1,H)};width:${pct(Math.max(0,fr.rw-2),W)};height:${pct(Math.max(0,fr.rh-2),H)};${fresh?phase(1600):""}" data-tip="${esc(tip)}" data-copypath="${esc(f.path)}">
         ${big?`<b>${esc(f.name)}</b><span>${f.e?`${f.e} edit${f.e>1?"s":""} `:""}${f.w?`${f.w} write${f.w>1?"s":""} `:""}${f.r?`${f.r} read${f.r>1?"s":""}`:""}</span>`:""}</div>`;
     }
@@ -906,7 +906,7 @@ function hotFilesCard(s){
   const top = files.slice(0,12);
   return `<div class="card">${head}<div class="card-b">
     <div class="tm-legend"><span class="k-edit"><i class="sw"></i>Edited · ${nE}</span><span class="k-new"><i class="sw"></i>Created · ${nN}</span><span class="k-read"><i class="sw"></i>Read only · ${nR}</span>
-      <span class="muted" style="margin-left:auto">Size = reads + 2× edits/writes · glowing = touched in the last 90s · click to copy path</span></div>
+      <span class="muted" style="margin-left:auto">Size = reads + 2× edits/writes (tools and shell: redirects, sed/perl -i, cp/mv, python) · glowing = last 90s · click to copy path</span></div>
     <div class="tm" role="img" aria-label="Treemap of files touched">${cells}</div>
     ${files.length>shown.length?`<div class="note">Showing the ${shown.length} hottest of ${files.length} files.</div>`:""}
   </div>
