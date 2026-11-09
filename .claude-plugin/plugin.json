@@ -1,6 +1,6 @@
 {
   "name": "agent-cockpit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Live dashboard for Claude Code: status, approvals from the browser, subagents, current work and token usage, across your laptop and SSH machines.",
   "author": { "name": "Tushar Goel", "url": "https://github.com/Tushar-ml" },
   "homepage": "https://github.com/Tushar-ml/agent-cockpit",

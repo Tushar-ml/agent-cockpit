@@ -261,6 +261,41 @@ table.mini td:not(:first-child),table.mini th:not(:first-child){text-align:right
 .muted{color:var(--muted)}
 .toast{position:fixed;right:20px;bottom:20px;z-index:60;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:13px;box-shadow:var(--shadow);animation:slidein .2s}
 
+/* account */
+.acct-top{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{padding:14px 16px}
+.stat .v{font-size:24px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.15}
+.stat .l{font-size:12px;color:var(--muted)}
+.stat .s{font-size:12px;color:var(--text-2);margin-top:2px;font-variant-numeric:tabular-nums}
+.limits{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.lim{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.lim .hd{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px}
+.lim .hd .pill{margin-left:auto}
+.lim .big{font-size:34px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.lim .big small{font-size:14px;color:var(--muted);font-weight:500;letter-spacing:0}
+.meter{height:10px;border-radius:5px;background:var(--surface-3);overflow:hidden}
+.meter i{display:block;height:100%;border-radius:5px;background:var(--sc)}
+.lim .rs{font-size:12.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.lim svg.trend{width:100%;height:48px;display:block}
+.lvl-ok{--sc:var(--s-idle)} .lvl-warn{--sc:var(--s-appr)} .lvl-high{--sc:var(--s-wait)} .lvl-crit{--sc:var(--s-err)}
+.bars{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:6px}
+.bars i{flex:1;background:var(--c1);border-radius:3px 3px 0 0;min-height:2px}
+.bars i:hover{background:var(--accent)}
+.bars i.today{background:var(--accent)}
+.bars-l{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:6px}
+.seg2{display:inline-flex;padding:2px;background:var(--surface-3);border-radius:7px;margin-left:auto}
+.seg2 button{border:0;background:transparent;font-size:11.5px;padding:3px 9px;border-radius:6px;color:var(--text-2);font-weight:500}
+.seg2 button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+table.tbl th{text-align:left;color:var(--muted);font-weight:500;padding:8px 16px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.tbl td{padding:8px 16px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.tbl tr:last-child td{border-bottom:0}
+table.tbl td.num,table.tbl th.num{text-align:right}
+table.tbl .share{display:inline-block;width:80px;height:6px;border-radius:0 3px 3px 0;background:var(--surface-3);vertical-align:middle;margin-right:8px}
+table.tbl .share i{display:block;height:100%;background:var(--c1);border-radius:0 3px 3px 0}
+.tblwrap{overflow-x:auto}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+
 @media (max-width:1100px){.grid2{grid-template-columns:1fr}}
 @media (max-width:820px){
   .layout{grid-template-columns:1fr}
@@ -289,6 +324,7 @@ table.mini td:not(:first-child),table.mini th:not(:first-child){text-align:right
     <div class="search"><svg class="svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" placeholder="Search sessions, hosts, paths…" autocomplete="off"></div>
     <div class="seg" id="seg"><button data-f="active" class="on">Active</button><button data-f="all">All</button><button data-f="ended">History</button></div>
     <button class="navitem" id="navOverview"></button>
+    <button class="navitem" id="navAccount"></button>
     <div id="side"></div>
   </aside>
   <main id="main">
@@ -301,7 +337,8 @@ table.mini td:not(:first-child),table.mini th:not(:first-child){text-align:right
 const TOKEN = "__COCKPIT_TOKEN__";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const S = { sessions:new Map(), hosts:new Map(), approvals:new Map(), sel:null, filter:"active", q:"", tl:"all", connected:false, skew:0 };
+const S = { sessions:new Map(), hosts:new Map(), approvals:new Map(), sel:null, page:"overview", filter:"active", q:"", tl:"all", connected:false, skew:0,
+  account:null, limits:{}, limitHist:{}, acctMetric:"cost", acctRange:30 };
 const prefs = (()=>{ try{ return JSON.parse(localStorage.getItem("cockpit")||"{}") }catch{ return {} } })();
 const savePrefs = ()=>{ try{ localStorage.setItem("cockpit", JSON.stringify(prefs)) }catch{} };
 
@@ -349,7 +386,7 @@ const sdot = st => `<span class="sdot st-${st} ${STATUS[st]?.live||st==="awaitin
 /* ------------------------------------------------------------- format */
 const fmtN = n => { n=+n||0; return n>=1e9?(n/1e9).toFixed(2)+"B": n>=1e6?(n/1e6).toFixed(n>=1e7?1:2)+"M": n>=1e3?(n/1e3).toFixed(n>=1e4?0:1)+"k": String(n); };
 function ago(t){ const d=Math.max(0,now()-t); return d<5?"now": d<60?Math.floor(d)+"s": d<3600?Math.floor(d/60)+"m": d<86400?Math.floor(d/3600)+"h": Math.floor(d/86400)+"d"; }
-function dur(d){ d=Math.max(0,Math.floor(d)); const h=Math.floor(d/3600), m=Math.floor(d%3600/60), s=d%60; return h? `${h}h ${m}m` : m? `${m}m ${String(s).padStart(2,"0")}s` : `${s}s`; }
+function dur(d){ d=Math.max(0,Math.floor(d)); if (d>=86400) return `${Math.floor(d/86400)}d ${Math.floor(d%86400/3600)}h`; const h=Math.floor(d/3600), m=Math.floor(d%3600/60), s=d%60; return h? `${h}h ${m}m` : m? `${m}m ${String(s).padStart(2,"0")}s` : `${s}s`; }
 const clock = t => new Date(t*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
 const tot = u => (u.in||0)+(u.out||0)+(u.cr||0)+(u.cw||0);
 const shortModel = m => (m||"").replace(/^claude-/,"").replace(/-\d{8}$/,"");
@@ -369,7 +406,9 @@ async function loadState(){
   S.sessions = new Map(d.sessions.map(s=>[s.id,s]));
   S.hosts = new Map(d.hosts.map(h=>[h.key,h]));
   S.approvals = new Map(d.approvals.map(a=>[a.id,a]));
-  if (!S.sel && location.hash.length>1) S.sel = decodeURIComponent(location.hash.slice(1));
+  S.account = d.account; S.limits = d.limits||{}; S.limitHist = d.limit_hist||{};
+  if (!S.sel && location.hash==="#account") S.page="account";
+  else if (!S.sel && location.hash.length>1) S.sel = decodeURIComponent(location.hash.slice(1));
   if (S.sel && !S.sessions.has(S.sel)) S.sel = null;
   render();
 }
@@ -390,7 +429,9 @@ function connect(){
       const isNew = !S.approvals.has(m.approval.id) && m.approval.status==="pending";
       S.approvals.set(m.approval.id, m.approval);
       if (isNew) alertApproval(m.approval);
-    } else if (m.type==="remove"){ S.sessions.delete(m.id); if (S.sel===m.id) S.sel=null; }
+    } else if (m.type==="account"){ S.account = m.account; }
+    else if (m.type==="limits"){ S.limits[m.host] = m.limits; S.limitHist[m.host] = m.hist; }
+    else if (m.type==="remove"){ S.sessions.delete(m.id); if (S.sel===m.id) S.sel=null; }
     schedule();
   };
 }
@@ -429,7 +470,11 @@ function renderKpis(){
   const hosts = [...S.hosts.values()].filter(h=>now()-h.last_seen<3600).length;
   const appr = pendingApprovals().length;
   const waiting = all.filter(s=>effStatus(s)==="waiting_input").length;
+  const lim = primaryLimits(), rl = lim?.rate_limits || {};
+  const fh = rl.five_hour?.used_percentage, sd = rl.seven_day?.used_percentage;
   const k = [
+    ...(fh!=null?[[Math.round(fh)+"%","5-hour limit used", fh>=80]]:[]),
+    ...(sd!=null?[[Math.round(sd)+"%","Weekly limit used", sd>=80]]:[]),
     [act,"Working now"], [appr,"Awaiting approval",appr>0], [waiting,"Waiting for input"], [subs,"Subagents running"],
     [fmtN(day),"Tokens · 24h incl. cache"], [fmtN(out),"Output · 24h"], [hosts,"Hosts active · 1h"],
   ];
@@ -478,8 +523,9 @@ function renderSide(){
   }
   if (!list.length) html = `<div class="empty-side">${S.sessions.size? "No sessions match this filter." : "No sessions yet. Start <code>claude</code> anywhere with the hooks installed."}</div>`;
   if (lastSig.side!==html){ $("#side").innerHTML = html; lastSig.side=html; }
-  const nav = `${ic("grid")}Overview`;
-  const nv=$("#navOverview"); nv.innerHTML=nav; nv.classList.toggle("on", !S.sel);
+  const nv=$("#navOverview"); nv.innerHTML=`${ic("grid")}Overview`; nv.classList.toggle("on", !S.sel && S.page!=="account");
+  const lim = primaryLimits(); const fh = lim?.rate_limits?.five_hour?.used_percentage;
+  const na=$("#navAccount"); na.innerHTML=`${ic("zap")}Account usage${fh!=null?`<span class="badge" style="margin-left:auto">5h ${Math.round(fh)}%</span>`:""}`; na.classList.toggle("on", !S.sel && S.page==="account");
 }
 
 /* ---------- approvals dock */
@@ -539,6 +585,7 @@ function updateTimers(){
   });
   document.querySelectorAll("[data-since]").forEach(el=>{ el.textContent = dur(now()-(+el.dataset.since)); });
   document.querySelectorAll("[data-ago]").forEach(el=>{ el.textContent = ago(+el.dataset.ago); });
+  document.querySelectorAll("[data-until]").forEach(el=>{ el.textContent = dur(Math.max(0,+el.dataset.until-now())); });
 }
 async function decide(aid, behavior){
   const reason = document.querySelector(`[data-reason="${aid}"]`)?.value || "";
@@ -551,7 +598,7 @@ async function decide(aid, behavior){
 /* ---------- main view */
 function renderView(){
   const s = S.sel && S.sessions.get(S.sel);
-  const html = s ? sessionView(s) : overview();
+  const html = s ? sessionView(s) : S.page==="account" ? accountView() : overview();
   const v=$("#view");
   if (lastSig.view!==html){
     const tl = v.querySelector(".tl"); const st = tl ? tl.scrollTop : 0;
@@ -608,6 +655,8 @@ function sessionView(s){
     ["folder", homeTilde(s.cwd)], s.branch && ["branch", s.branch], s.model && ["cpu", shortModel(s.model)],
     s.permission_mode && ["shield", s.permission_mode], ["clock", `started ${ago(s.started)} ago`], ["msg", `${s.turns||0} prompts`],
     ["hash", s.id.slice(0,8)],
+    (s.cost_usd!=null || s.usage?.cost) && ["zap", s.cost_usd!=null ? `${money(s.cost_usd)} session cost` : `≈${money(s.usage.cost)} API-equiv.`],
+    (s.lines_added!=null) && ["edit", `+${s.lines_added} / −${s.lines_removed||0} lines`],
   ].filter(Boolean).map(([i,t])=>`<span class="chip" title="${esc(t)}">${ic(i)}<span>${esc(t)}</span></span>`).join("");
 
   const question = s.question && s.question.length ? `<div class="bubble"><span class="who">Claude is asking</span>${s.question.map(q=>`<b>${esc(q.question)}</b>${(q.options||[]).map(o=>`<span class="q-opt">${esc(o.label)}<small>${esc(o.description||"")}</small></span>`).join("")}`).join("<br>")}<div class="muted" style="margin-top:8px;font-size:12px">Answer in the terminal on ${esc(h.hostname)}.</div></div>` : "";
@@ -649,6 +698,123 @@ function sessionView(s){
       ${toolMix(s)}
     </div>
   </div>`;
+}
+
+const money = v => { v=+v||0; if (v===0) return "$0"; return v>=1000?"$"+(v/1000).toFixed(1)+"k": v>=100?"$"+v.toFixed(0): v>=1?"$"+v.toFixed(2): "$"+v.toFixed(3); };
+function primaryLimits(){
+  let best=null;
+  for (const [hk,l] of Object.entries(S.limits||{})){ if (l?.rate_limits && (!best || l.ts>best.ts)) best={...l, host:hk}; }
+  return best;
+}
+const lvl = p => p>=95?"crit": p>=80?"high": p>=50?"warn":"ok";
+const lvlLabel = {ok:["Plenty left","check"], warn:["Over half used","clock"], high:["Getting close","alert"], crit:["At the limit","alert"]};
+function untilTxt(ts){ if(!ts) return ""; const d=ts-now(); if (d<=0) return "resetting now";
+  const when = new Date(ts*1000); const sameDay = new Date(now()*1000).toDateString()===when.toDateString();
+  return `resets in <span data-until="${ts}">${dur(d)}</span> · ${sameDay? when.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}) : when.toLocaleString([], {weekday:"short",hour:"numeric",minute:"2-digit"})}`; }
+function trendSvg(hist, idx, windowSec){
+  const t0 = now()-windowSec; const pts = (hist||[]).filter(h=>h[0]>=t0 && h[idx]!=null);
+  if (pts.length<2) return `<div class="note">Trend appears after a few minutes of activity.</div>`;
+  const W=300,H=48; const xy = pts.map(h=>[ (h[0]-t0)/windowSec*W, H-2-(Math.min(100,h[idx])/100)*(H-4) ]);
+  const d = xy.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  return `<svg class="trend" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="usage trend">
+    <line x1="0" x2="${W}" y1="${H-2-0.8*(H-4)}" y2="${H-2-0.8*(H-4)}" stroke="var(--border-strong)" stroke-dasharray="3 3" stroke-width="1" vector-effect="non-scaling-stroke"/>
+    <path d="${d}" fill="none" stroke="var(--sc)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+}
+function limitCard(title, w, hist, idx, windowSec, sub){
+  if (!w || w.used_percentage==null) return "";
+  const p = Math.max(0, w.used_percentage), L = lvl(p), [lab, icn] = lvlLabel[L];
+  return `<div class="card lim lvl-${L}"><div class="hd">${esc(title)}<span class="pill" style="--sc:var(--sc)">${ic(icn)}${lab}</span></div>
+    <div class="big">${p.toFixed(0)}%<small> used${sub?` · ${esc(sub)}`:""}</small></div>
+    <div class="meter"><i style="width:${Math.min(100,p)}%"></i></div>
+    <div class="rs">${untilTxt(w.resets_at)}</div>
+    ${idx!=null?trendSvg(hist, idx, windowSec):""}</div>`;
+}
+function accountView(){
+  const A = S.account || {daily:{},models:{},projects:[],hosts:{}};
+  const limEntries = Object.entries(S.limits||{}).filter(([,l])=>l?.rate_limits).sort((a,b)=>b[1].ts-a[1].ts);
+  // date helpers
+  const dayKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  const today = new Date(now()*1000);
+  const sumDays = n => { let c=0,t=0,o=0,m=0; for (let i=0;i<n;i++){ const d=new Date(today.getTime()-i*864e5); const x=A.daily[dayKey(d)]; if(x){c+=x.cost;t+=x.tok;o+=x.out;m+=x.msgs;} } return {c,t,o,m}; };
+  const d1=sumDays(1), d7=sumDays(7), d30=sumDays(30);
+  const live = [...S.sessions.values()].filter(s=>["running","thinking","subagents","awaiting_approval","waiting_input"].includes(effStatus(s)));
+  const liveCost = live.reduce((n,s)=>n+(s.cost_usd ?? s.usage?.cost ?? 0),0);
+  const stat = (v,l,sub) => `<div class="card stat"><div class="v">${v}</div><div class="l">${l}</div>${sub?`<div class="s">${sub}</div>`:""}</div>`;
+
+  // limits section
+  let limHtml;
+  if (limEntries.length){
+    limHtml = limEntries.map(([hk,l])=>{
+      const h = S.hosts.get(hk) || {hostname:hk}; const rl=l.rate_limits; const hist=S.limitHist[hk];
+      const sp = rl.spend_limit;
+      return `<div class="section-title" style="margin-top:${limEntries.length>1?"14px":"0"}">${ic(h.local?"laptop":"server",'style="width:13px;height:13px;vertical-align:-2px"')} ${esc(h.user?h.user+"@":"")}${esc(h.hostname)} · updated <span data-ago="${l.ts}"></span> ago</div>
+        <div class="limits">
+          ${limitCard("Current 5-hour session", rl.five_hour, hist, 1, 86400)}
+          ${limitCard("Weekly · all models", rl.seven_day, hist, 2, 7*86400)}
+          ${sp?limitCard(`Spend limit${sp.period?` · ${sp.period}`:""}`, sp, null, null, 0, sp.used_usd!=null&&sp.limit_usd!=null?`${money(sp.used_usd)} of ${money(sp.limit_usd)}`:""):""}
+        </div>`;
+    }).join("");
+  } else {
+    limHtml = `<div class="card help"><h3>${ic("clock",'style="vertical-align:-3px"')} Plan limits not reported yet</h3>
+      <p>The 5-hour and weekly limits come from Claude Code's status line, which includes them for claude.ai Pro, Max and Ultra subscribers after the first response in a session.</p>
+      <p>Turn on the relay once (your current status line keeps working), then send any prompt:</p>
+      <pre class="code">cockpit statusline on</pre>
+      <p class="muted">API-key and Bedrock/Vertex users don't have plan limits; the token and cost estimates below still apply.</p></div>`;
+  }
+
+  // daily chart
+  const n = S.acctRange, metric = S.acctMetric;
+  const days=[]; for (let i=n-1;i>=0;i--){ const d=new Date(today.getTime()-i*864e5); const k=dayKey(d); days.push([d,k,A.daily[k]||{cost:0,tok:0,out:0,msgs:0}]); }
+  const val = x => metric==="cost"? x.cost : metric==="out"? x.out : x.tok;
+  const fmtV = v => metric==="cost"? money(v) : fmtN(v)+" tok";
+  const mx = Math.max(1e-9, ...days.map(d=>val(d[2])));
+  const tot = days.reduce((a,d)=>a+val(d[2]),0);
+  const chart = `<div class="card"><div class="card-h">${ic("zap")}Daily usage · all machines
+      <div class="seg2" style="margin-left:auto">${[["cost","Est. cost"],["tok","Tokens"],["out","Output"]].map(([k,l])=>`<button data-am="${k}" class="${metric===k?"on":""}">${l}</button>`).join("")}</div>
+      <div class="seg2">${[[14,"14d"],[30,"30d"],[90,"90d"]].map(([k,l])=>`<button data-ar="${k}" class="${n===k?"on":""}">${l}</button>`).join("")}</div></div>
+    <div class="card-b"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-2)"><span><b style="color:var(--text);font-size:15px">${fmtV(tot)}</b> over ${n} days · avg ${fmtV(tot/n)}/day</span><span class="muted">peak ${fmtV(mx)}</span></div>
+      <div class="bars">${days.map(([d,k,x],i)=>`<i class="${i===n-1?"today":""}" style="height:${Math.max(1.5,100*val(x)/mx)}%" data-tip="${d.toLocaleDateString([], {weekday:"short",month:"short",day:"numeric"})} · ${money(x.cost)} · ${fmtN(x.tok)} tokens · ${x.msgs} responses"></i>`).join("")}</div>
+      <div class="bars-l"><span>${days[0][0].toLocaleDateString([], {month:"short",day:"numeric"})}</span><span>today</span></div></div></div>`;
+
+  // models
+  const models = Object.entries(A.models||{}).sort((a,b)=>b[1].cost-a[1].cost);
+  const mcost = Math.max(1e-9, ...models.map(m=>m[1].cost));
+  const modelTbl = `<div class="card"><div class="card-h">${ic("cpu")}By model<span class="sub">all time</span></div><div class="tblwrap"><table class="tbl">
+    <tr><th>Model</th><th class="num">Responses</th><th class="num">Input</th><th class="num">Cache read</th><th class="num">Cache write</th><th class="num">Output</th><th>Est. cost</th></tr>
+    ${models.map(([m,x])=>`<tr><td>${esc(shortModel(m))}</td><td class="num">${x.msgs.toLocaleString()}</td><td class="num">${fmtN(x.in)}</td><td class="num">${fmtN(x.cr)}</td><td class="num">${fmtN(x.cw)}</td><td class="num">${fmtN(x.out)}</td><td><span class="share"><i style="width:${100*x.cost/mcost}%"></i></span>${money(x.cost)}</td></tr>`).join("") || `<tr><td colspan="7" class="muted">No usage yet</td></tr>`}
+  </table></div></div>`;
+
+  // projects
+  const projs = (A.projects||[]).slice(0,15);
+  const pcost = Math.max(1e-9, ...projs.map(p=>p.cost));
+  const projTbl = `<div class="card"><div class="card-h">${ic("folder")}Top projects<span class="sub">by estimated cost, all time</span></div><div class="tblwrap"><table class="tbl">
+    <tr><th>Project</th><th>Machine</th><th class="num">Responses</th><th class="num">Tokens</th><th>Est. cost</th><th class="num">Last active</th></tr>
+    ${projs.map(p=>{ const h=S.hosts.get(p.host)||{hostname:(p.host||"").split("@")[1]||p.host}; const lt=p.last?Date.parse(p.last)/1000:0;
+      return `<tr><td><b>${esc(p.project)}</b></td><td>${esc(h.hostname)}${h.ssh?' <span class="badge ssh">SSH</span>':""}</td><td class="num">${p.msgs.toLocaleString()}</td><td class="num">${fmtN(p.tok)}</td><td><span class="share"><i style="width:${100*p.cost/pcost}%"></i></span>${money(p.cost)}</td><td class="num">${lt?ago(lt)+" ago":""}</td></tr>`; }).join("") || `<tr><td colspan="6" class="muted">No usage yet</td></tr>`}
+  </table></div></div>`;
+
+  // hosts
+  const hostsArr = Object.entries(A.hosts||{}).sort((a,b)=>b[1].cost-a[1].cost);
+  const hostTbl = hostsArr.length>1 ? `<div class="card"><div class="card-h">${ic("server")}By machine</div><div class="tblwrap"><table class="tbl">
+    <tr><th>Machine</th><th class="num">Responses</th><th class="num">Tokens</th><th class="num">Est. cost</th></tr>
+    ${hostsArr.map(([hk,x])=>{ const h=S.hosts.get(hk)||{hostname:hk}; return `<tr><td>${esc(h.user?h.user+"@":"")}${esc(h.hostname)}</td><td class="num">${x.msgs.toLocaleString()}</td><td class="num">${fmtN(x.tok)}</td><td class="num">${money(x.cost)}</td></tr>`; }).join("")}
+  </table></div></div>` : "";
+
+  const since = A.first ? new Date(A.first).toLocaleDateString([], {month:"short",day:"numeric",year:"numeric"}) : "";
+  return `
+    <div class="sess-h"><div><h1>Account usage</h1><div class="title">Plan limits, plus token usage and API-equivalent cost across every session on every machine${since?` since ${since}`:""}.</div></div></div>
+    <div class="section-title" style="margin-top:0">Plan limits</div>
+    ${limHtml}
+    <div class="section-title">Spend estimate</div>
+    <div class="acct-top">
+      ${stat(money(d1.c),"Today",`${fmtN(d1.t)} tokens · ${d1.m} responses`)}
+      ${stat(money(d7.c),"Last 7 days",`${fmtN(d7.t)} tokens`)}
+      ${stat(money(d30.c),"Last 30 days",`${fmtN(d30.t)} tokens`)}
+      ${stat(money(A.cost),"All time",`${fmtN(A.tok)} tokens · ${(A.msgs||0).toLocaleString()} responses`)}
+      ${stat(money(liveCost),"Active sessions now",`${live.length} working`)}
+    </div>
+    <div class="note">Costs are estimates at Anthropic API list prices (cache writes and reads priced separately). On a Pro/Max plan you aren't billed per token, so read these as API-equivalent value; your plan limits above are what actually cap you.</div>
+    <div class="stack" style="margin-top:18px">${chart}${modelTbl}${projTbl}${hostTbl}</div>`;
 }
 
 function subagentRow(sa){
@@ -700,7 +866,7 @@ function timeline(s){
 function usageCard(s,u){
   const total = tot(u);
   const parts = [["Cache read",u.cr,"--c1"],["Cache write",u.cw,"--c2"],["Input",u.in,"--c3"],["Output",u.out,"--c4"]];
-  const win = ctxWindow(s), pct = Math.min(100, 100*(u.ctx||0)/win);
+  const win = s.ctx_size || ctxWindow(s), pct = s.ctx_pct!=null ? Math.min(100, s.ctx_pct) : Math.min(100, 100*(u.ctx||0)/win);
   const gc = pct>85?"var(--s-err)":pct>65?"var(--s-appr)":"var(--s-run)";
   const models = Object.entries(u.by_model||{}).sort((a,b)=>tot(b[1])-tot(a[1]));
   // last 24 hours, hourly buckets (UTC keys from transcript timestamps)
@@ -709,7 +875,7 @@ function usageCard(s,u){
   const mx = Math.max(1,...bars.map(b=>b[1]));
   const cacheHit = (u.cr||0)/Math.max(1,(u.cr||0)+(u.cw||0)+(u.in||0));
   return `<div class="card"><div class="card-h">${ic("zap")}Token usage<span class="sub">${u.msgs||0} API responses</span></div><div class="card-b">
-    <div class="hero-num">${fmtN(total)}</div><div class="hero-sub">total tokens · ${fmtN(u.out)} generated · ${(cacheHit*100).toFixed(0)}% of input served from cache${u.side?` · ${fmtN(u.side)} by subagents`:""}</div>
+    <div class="hero-num">${fmtN(total)}${u.cost?` <span style="font-size:15px;color:var(--muted);font-weight:600">≈ ${money(s.cost_usd ?? u.cost)}</span>`:""}</div><div class="hero-sub">total tokens · ${fmtN(u.out)} generated · ${(cacheHit*100).toFixed(0)}% of input served from cache${u.side?` · ${fmtN(u.side)} by subagents`:""}</div>
     <div class="stackbar" role="img" aria-label="Token mix">${parts.filter(p=>p[1]>0).map(p=>`<i style="flex:${p[1]};background:var(${p[2]})" data-tip="${p[0]}: ${(+p[1]).toLocaleString()} tokens (${(100*p[1]/Math.max(1,total)).toFixed(1)}%)"></i>`).join("")}</div>
     <div class="legend">${parts.map(p=>`<div><span class="sw" style="background:var(${p[2]})"></span>${p[0]}<b>${fmtN(p[1])}</b></div>`).join("")}</div>
     <div class="gauge" style="--gc:${gc}"><div class="gl"><span>Context window</span><span><b>${fmtN(u.ctx||0)}</b> / ${fmtN(win)} · ${pct.toFixed(0)}%</span></div><div class="gt"><i style="width:${pct}%"></i></div></div>
@@ -737,14 +903,17 @@ function applyTheme(){ const t=prefs.theme; if (t==="light"||t==="dark") documen
 
 /* ------------------------------------------------------------- events */
 document.addEventListener("click", e=>{
-  const t = e.target.closest("[data-sel],[data-dec],[data-tl],[data-copy],[data-dismiss],#navOverview,#seg button,#btnTheme,#btnSound,#btnNotify");
+  const t = e.target.closest("[data-sel],[data-dec],[data-tl],[data-copy],[data-dismiss],[data-am],[data-ar],#navOverview,#navAccount,#seg button,#btnTheme,#btnSound,#btnNotify");
   if (!t) return;
   if (t.dataset.sel){ e.preventDefault(); S.sel=t.dataset.sel; history.replaceState(null,"","#"+encodeURIComponent(S.sel)); render(); window.scrollTo({top:0}); return; }
   if (t.dataset.dec) return decide(t.dataset.aid, t.dataset.dec);
   if (t.dataset.tl){ S.tl=t.dataset.tl; render(); return; }
   if (t.dataset.copy){ const s=S.sessions.get(t.dataset.copy); const cmd=`cd ${JSON.stringify(s.cwd)} && claude --resume ${s.id}`; navigator.clipboard?.writeText(cmd).then(()=>toast("Copied: "+cmd)).catch(()=>toast(cmd)); return; }
   if (t.dataset.dismiss){ api(`/api/session/${t.dataset.dismiss}/dismiss`,{method:"POST"}).then(()=>{S.sessions.delete(t.dataset.dismiss); S.sel=null; render();}); return; }
-  if (t.id==="navOverview"){ S.sel=null; history.replaceState(null,"","#"); render(); return; }
+  if (t.id==="navOverview"){ S.sel=null; S.page="overview"; history.replaceState(null,"","#"); render(); return; }
+  if (t.id==="navAccount"){ S.sel=null; S.page="account"; history.replaceState(null,"","#account"); render(); window.scrollTo({top:0}); return; }
+  if (t.dataset.am){ S.acctMetric=t.dataset.am; render(); return; }
+  if (t.dataset.ar){ S.acctRange=+t.dataset.ar; render(); return; }
   if (t.parentElement?.id==="seg"){ S.filter=t.dataset.f; document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",b===t)); render(); return; }
   if (t.id==="btnTheme"){ const order=["auto","dark","light"]; prefs.theme=order[(order.indexOf(prefs.theme||"auto")+1)%3]; savePrefs(); applyTheme(); renderTools(); toast("Theme: "+prefs.theme); return; }
   if (t.id==="btnSound"){ prefs.sound = prefs.sound===false; savePrefs(); renderTools(); if (prefs.sound) beep(); return; }
@@ -761,7 +930,7 @@ document.addEventListener("keydown", e=>{
   if (a && (e.key==="a"||e.key==="A")) { decide(a.id, e.shiftKey && a.suggestions?.length ? "always" : "allow"); }
   else if (a && e.key==="d") decide(a.id, "deny");
   else if (e.key==="j"||e.key==="k"){ const l=visibleSessions(); if(!l.length) return; let i=l.findIndex(s=>s.id===S.sel); i = e.key==="j"? Math.min(l.length-1,i+1) : Math.max(0,i-1); S.sel=l[i].id; render(); }
-  else if (e.key==="Escape"){ S.sel=null; render(); }
+  else if (e.key==="Escape"){ S.sel=null; S.page="overview"; render(); }
   else if (e.key==="/"){ e.preventDefault(); $("#q").focus(); }
 });
 const tip=$("#tip");

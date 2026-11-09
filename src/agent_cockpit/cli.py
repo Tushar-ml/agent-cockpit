@@ -44,7 +44,7 @@ STATE_PATH = os.path.join(BASE, "state.json")
 SETTINGS_PATH = os.path.join(CLAUDE_DIR, "settings.json")
 HOOK_MARK = "agent-cockpit/hook.py"
 DEFAULT_PORT = 7777
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 MAX_EVENTS = 400
 SCAN_DAYS = 3
@@ -124,6 +124,58 @@ def response_brief(resp):
     return ""
 
 
+# ============================================================ pricing ======
+# USD per million tokens at Anthropic API list prices: (input, output, cache read).
+# Cache writes: 1.25x input for 5-minute, 2x input for 1-hour. Subscription plans are not billed
+# per token, so for Pro/Max users these are "API-equivalent" estimates.
+PRICES = [
+    ("fable-5-1", (10.0, 50.0, 0.25)), ("mythos-5-1", (10.0, 50.0, 0.25)),
+    ("fable-5", (10.0, 50.0, 1.0)), ("mythos-5", (10.0, 50.0, 1.0)), ("fable", (10.0, 50.0, 0.25)),
+    ("opus-5-5", (4.0, 20.0, 0.20)), ("opus-5", (5.0, 25.0, 0.50)),
+    ("opus-4-8", (5.0, 25.0, 0.50)), ("opus-4-7", (5.0, 25.0, 0.50)), ("opus-4-6", (5.0, 25.0, 0.50)),
+    ("opus-4-5", (5.0, 25.0, 0.50)), ("opus-4-1", (15.0, 75.0, 1.50)), ("opus-4", (15.0, 75.0, 1.50)),
+    ("opus", (4.0, 20.0, 0.20)),
+    ("sonnet-5-5", (2.0, 10.0, 0.20)), ("sonnet-5", (2.0, 10.0, 0.20)),
+    ("sonnet-4-6", (3.0, 15.0, 0.30)), ("sonnet-4-5", (3.0, 15.0, 0.30)), ("sonnet-4", (3.0, 15.0, 0.30)),
+    ("sonnet", (2.0, 10.0, 0.20)),
+    ("haiku-5-5", (0.10, 0.50, 0.01)), ("haiku-4-5", (1.0, 5.0, 0.10)), ("haiku-3-5", (0.80, 4.0, 0.08)),
+    ("haiku", (0.10, 0.50, 0.01)),
+]
+
+
+def price_of(model):
+    m = (model or "").lower()
+    if m and "claude" not in m and not any(k in m for k in ("opus", "sonnet", "haiku", "fable", "mythos")):
+        return (0.0, 0.0, 0.0)  # non-Anthropic model routed through Claude Code: no Anthropic cost
+    for key, p in PRICES:
+        if key in m:
+            return p
+    return PRICES[5][1]  # unknown -> current Opus
+
+
+def cost_of(e):
+    pin, pout, pcr = price_of(e.get("model"))
+    cw = int(e.get("cw") or 0)
+    cw1 = min(cw, int(e.get("cw1") or 0))
+    return (int(e.get("in") or 0) * pin + int(e.get("out") or 0) * pout + int(e.get("cr") or 0) * pcr
+            + (cw - cw1) * pin * 1.25 + cw1 * pin * 2.0) / 1e6
+
+
+def _local_day(ts):
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone().strftime("%Y-%m-%d")
+    except Exception:
+        return time.strftime("%Y-%m-%d")
+
+
+ACCOUNT_VERSION = 2
+
+
+def _empty_account():
+    return {"v": ACCOUNT_VERSION, "daily": {}, "models": {}, "projects": {}, "hosts": {}, "first": None, "last": None}
+
+
 # ============================================================== state ======
 
 class Store:
@@ -136,6 +188,13 @@ class Store:
         self.clients = []
         self.scan_offsets = {}
         self.seen_usage = {}  # sid -> set(msg ids)
+        self.account = _empty_account()
+        self.acct_ids = set()
+        self.acct_dirty = False
+        self.limits = {}      # host key -> latest statusline rate_limits snapshot
+        self.limit_hist = {}  # host key -> [[ts, five_hour_pct, seven_day_pct], ...]
+        self.sl_sig = {}
+        self._cwd_hint = {}
         self.dirty = False
         self.load()
 
@@ -153,6 +212,18 @@ class Store:
                     s["status_detail"] = "Dashboard restarted — waiting for next event"
                 s["pending"] = []
             self.scan_offsets = d.get("scan_offsets", {})
+            self.limits = d.get("limits", {})
+            self.limit_hist = d.get("limit_hist", {})
+            acct = d.get("account") or {}
+            if acct.get("v") == ACCOUNT_VERSION:
+                self.account = acct
+                self.acct_ids = set(d.get("acct_ids", []))
+            else:
+                # first run with account-level usage: rebuild every total from the transcripts
+                self.scan_offsets = {}
+                for sid, s in self.sessions.items():
+                    s["usage"] = {"in": 0, "out": 0, "cr": 0, "cw": 0, "msgs": 0, "ctx": 0, "by_model": {}, "side": 0}
+                    self.seen_usage[sid] = set()
         except Exception:
             pass
 
@@ -168,7 +239,9 @@ class Store:
                 c = dict(s)
                 c["_usage_ids"] = list(self.seen_usage.get(sid, ()))[-5000:]
                 sess[sid] = c
-            data = {"sessions": sess, "hosts": self.hosts, "scan_offsets": self.scan_offsets}
+            data = {"sessions": sess, "hosts": self.hosts, "scan_offsets": self.scan_offsets,
+                    "account": self.account, "acct_ids": list(self.acct_ids),
+                    "limits": self.limits, "limit_hist": self.limit_hist}
             self.dirty = False
         tmp = STATE_PATH + ".tmp"
         with open(tmp, "w") as f:
@@ -243,17 +316,23 @@ class Store:
         u = s["usage"]
         for e in entries:
             mid = e.get("id")
-            if not mid or mid in seen:
+            if not mid:
+                continue
+            self.account_add(e, s.get("project") or "~", s.get("host") or "?")
+            if mid in seen:
                 continue
             seen.add(mid)
             for k in ("in", "out", "cr", "cw"):
                 u[k] += int(e.get(k) or 0)
             u["msgs"] += 1
+            c = cost_of(e)
+            u["cost"] = u.get("cost", 0.0) + c
             m = e.get("model") or "unknown"
             bm = u["by_model"].setdefault(m, {"in": 0, "out": 0, "cr": 0, "cw": 0, "msgs": 0})
             for k in ("in", "out", "cr", "cw"):
                 bm[k] += int(e.get(k) or 0)
             bm["msgs"] += 1
+            bm["cost"] = bm.get("cost", 0.0) + c
             if e.get("side"):
                 u["side"] += int(e.get("in") or 0) + int(e.get("out") or 0) + int(e.get("cr") or 0) + int(e.get("cw") or 0)
                 aid = e.get("agent_id")
@@ -273,6 +352,103 @@ class Store:
                 if len(hb) > 72:
                     for k in sorted(hb)[:-72]:
                         hb.pop(k, None)
+
+    def account_add(self, e, project, host_key):
+        mid = e.get("id")
+        if not mid or mid in self.acct_ids:
+            return
+        self.acct_ids.add(mid)
+        a = self.account
+        c = cost_of(e)
+        tin, tout, tcr, tcw = (int(e.get(k) or 0) for k in ("in", "out", "cr", "cw"))
+        tok = tin + tout + tcr + tcw
+        ts = e.get("ts") or ""
+        day = _local_day(ts) if ts else time.strftime("%Y-%m-%d")
+        d = a["daily"].setdefault(day, {"tok": 0, "out": 0, "cost": 0.0, "msgs": 0, "models": {}})
+        d["tok"] += tok
+        d["out"] += tout
+        d["cost"] += c
+        d["msgs"] += 1
+        mk = e.get("model") or "unknown"
+        dm = d["models"].setdefault(mk, {"tok": 0, "cost": 0.0})
+        dm["tok"] += tok
+        dm["cost"] += c
+        mm = a["models"].setdefault(mk, {"in": 0, "out": 0, "cr": 0, "cw": 0, "msgs": 0, "cost": 0.0})
+        for k, v in (("in", tin), ("out", tout), ("cr", tcr), ("cw", tcw)):
+            mm[k] += v
+        mm["msgs"] += 1
+        mm["cost"] += c
+        pk = f"{host_key}|{project}"
+        pp = a["projects"].setdefault(pk, {"project": project, "host": host_key, "tok": 0, "cost": 0.0, "msgs": 0, "last": ""})
+        pp["tok"] += tok
+        pp["cost"] += c
+        pp["msgs"] += 1
+        if ts > pp["last"]:
+            pp["last"] = ts
+        hh = a["hosts"].setdefault(host_key, {"tok": 0, "cost": 0.0, "msgs": 0})
+        hh["tok"] += tok
+        hh["cost"] += c
+        hh["msgs"] += 1
+        if ts:
+            a["first"] = min(a["first"] or ts, ts)
+            a["last"] = max(a["last"] or ts, ts)
+        self.acct_dirty = True
+        self.dirty = True
+
+    def account_public(self):
+        a = self.account
+        days = sorted(a["daily"])[-370:]
+        projects = sorted(a["projects"].values(), key=lambda x: -x["cost"])[:100]
+        return {"daily": {k: a["daily"][k] for k in days}, "models": a["models"], "projects": projects,
+                "hosts": a["hosts"], "first": a["first"], "last": a["last"],
+                "tok": sum(x["tok"] for x in a["hosts"].values()), "cost": sum(x["cost"] for x in a["hosts"].values()),
+                "msgs": sum(x["msgs"] for x in a["hosts"].values())}
+
+    def ingest_statusline(self, ev):
+        p = ev.get("payload") or {}
+        h = ev.get("host") or {}
+        ts = float(ev.get("ts") or time.time())
+        with self.lock:
+            hk = self.touch_host(h, ts)
+            rl = p.get("rate_limits")
+            if isinstance(rl, dict) and rl:
+                prev = self.limits.get(hk, {})
+                snap = {"rate_limits": rl, "ts": ts, "session": p.get("session_id"), "version": p.get("version", "")}
+                self.limits[hk] = snap
+                fh = (rl.get("five_hour") or {}).get("used_percentage")
+                sd = (rl.get("seven_day") or {}).get("used_percentage")
+                hist = self.limit_hist.setdefault(hk, [])
+                if not hist or ts - hist[-1][0] >= 60 or hist[-1][1] != fh or hist[-1][2] != sd:
+                    hist.append([ts, fh, sd])
+                    cutoff = ts - 8 * 86400
+                    while hist and hist[0][0] < cutoff:
+                        hist.pop(0)
+                if prev.get("rate_limits") != rl or ts - prev.get("ts", 0) > 30:
+                    self.dirty = True
+                    self.broadcast({"type": "limits", "host": hk, "limits": snap, "hist": hist[-1500:]})
+            sid = p.get("session_id")
+            if not sid:
+                return
+            cwd = (p.get("workspace") or {}).get("current_dir") or p.get("cwd")
+            s = self.sessions.get(sid) or self.get_session(sid, hk, cwd, ts)
+            cost = p.get("cost") or {}
+            cw = p.get("context_window") or {}
+            sig = (cost.get("total_cost_usd"), cost.get("total_lines_added"), cost.get("total_lines_removed"),
+                   cw.get("used_percentage"), (p.get("model") or {}).get("display_name"))
+            if self.sl_sig.get(sid) == sig:
+                return
+            self.sl_sig[sid] = sig
+            s["cost_usd"] = cost.get("total_cost_usd")
+            s["lines_added"] = cost.get("total_lines_added")
+            s["lines_removed"] = cost.get("total_lines_removed")
+            s["api_ms"] = cost.get("total_api_duration_ms")
+            s["ctx_pct"] = cw.get("used_percentage")
+            s["ctx_size"] = cw.get("context_window_size")
+            s["model_name"] = (p.get("model") or {}).get("display_name") or s.get("model_name")
+            if (p.get("model") or {}).get("id"):
+                s["model"] = p["model"]["id"]
+            s["cc_version"] = p.get("version") or s.get("cc_version")
+            self.push_session(s)
 
     def add_event(self, s, ev):
         s["events"].append(ev)
@@ -594,14 +770,13 @@ class Store:
                 mt = os.path.getmtime(path)
             except OSError:
                 continue
-            if mt < cutoff:
-                continue
             sid = os.path.basename(path)[:-6]
+            history_only = mt < cutoff and sid not in self.sessions
             subs = glob.glob(os.path.join(os.path.dirname(path), sid, "subagents", "*.jsonl"))
             for f, side in [(path, False)] + [(x, True) for x in subs]:
-                self._scan_file(sid, f, side, host, mt)
+                self._scan_file(sid, f, side, host, mt, history_only)
 
-    def _scan_file(self, sid, path, side, host, mtime):
+    def _scan_file(self, sid, path, side, host, mtime, history_only=False):
         try:
             size = os.path.getsize(path)
         except OSError:
@@ -622,6 +797,8 @@ class Store:
         usage = {}
         meta = {}
         for line in lines:
+            if history_only and meta.get("cwd") and b'"usage"' not in line:
+                continue
             try:
                 o = json.loads(line)
             except Exception:
@@ -648,12 +825,23 @@ class Store:
                 mid = msg.get("id") or o.get("uuid")
                 usage[mid] = {"id": mid, "model": msg.get("model", ""), "in": u.get("input_tokens", 0) or 0,
                               "out": u.get("output_tokens", 0) or 0, "cr": u.get("cache_read_input_tokens", 0) or 0,
-                              "cw": u.get("cache_creation_input_tokens", 0) or 0, "ts": o.get("timestamp"), "side": side or bool(o.get("isSidechain"))}
+                              "cw": u.get("cache_creation_input_tokens", 0) or 0,
+                              "cw1": (u.get("cache_creation") or {}).get("ephemeral_1h_input_tokens", 0) or 0,
+                              "ts": o.get("timestamp"), "side": side or bool(o.get("isSidechain"))}
         if not usage and not meta:
             return
         with self.lock:
             exists = sid in self.sessions
-            if not exists and side:
+            if history_only or (not exists and side):
+                hk = self.host_key(host)
+                if hk not in self.hosts:
+                    self.touch_host(host, mtime)
+                cwd = meta.get("cwd") or self._cwd_hint.get(sid) or ""
+                if cwd and not side:
+                    self._cwd_hint[sid] = cwd
+                proj = os.path.basename(cwd.rstrip("/")) or _project_from_dir(path)
+                for e in usage.values():
+                    self.account_add(e, proj, hk)
                 return
             s = self.sessions.get(sid)
             if not s:
@@ -683,6 +871,10 @@ class Store:
                 self.scan_local()
             except Exception as e:
                 print("scan error:", e, file=sys.stderr)
+            if self.acct_dirty:
+                with self.lock:
+                    self.acct_dirty = False
+                    self.broadcast({"type": "account", "account": self.account_public()})
             try:
                 self.save()
             except Exception as e:
@@ -695,8 +887,21 @@ class Store:
                 "sessions": list(self.sessions.values()),
                 "hosts": list(self.hosts.values()),
                 "approvals": [a for a in self.approvals.values() if a["status"] == "pending" or time.time() - a.get("decided", 0) < 600],
-                "server": {"hostname": local_hostname(), "time": time.time(), "version": "1.0"},
+                "account": self.account_public(),
+                "limits": self.limits,
+                "limit_hist": {k: v[-1500:] for k, v in self.limit_hist.items()},
+                "server": {"hostname": local_hostname(), "time": time.time(), "version": __version__},
             }
+
+
+def _project_from_dir(path):
+    # ~/.claude/projects/-Users-me-code-app/<sid>.jsonl -> "app" (best effort; dashes are ambiguous)
+    parts = path.split(os.sep)
+    try:
+        d = parts[parts.index("projects") + 1]
+        return d.rstrip("-").split("-")[-1] or d
+    except Exception:
+        return "~"
 
 
 def _iso(s):
@@ -767,7 +972,7 @@ class Handler(BaseHTTPRequestHandler):
                 html = f.read().replace(b"__COCKPIT_TOKEN__", TOKEN.encode())
             return self._send(200, html, "text/html; charset=utf-8")
         if path == "/healthz":
-            return self._send(200, {"ok": True})
+            return self._send(200, {"ok": True, "version": __version__})
         if not self._authed():
             return self._send(401, {"error": "bad token"})
         if path == "/api/state":
@@ -792,6 +997,14 @@ class Handler(BaseHTTPRequestHandler):
         body = self._body()
         if path == "/api/event":
             STORE.ingest(body)
+            return self._send(200, {"ok": True})
+        if path == "/api/shutdown":
+            # used by a newer plugin version to replace this server
+            self._send(200, {"ok": True})
+            threading.Timer(0.2, _shutdown).start()
+            return
+        if path == "/api/statusline":
+            STORE.ingest_statusline(body)
             return self._send(200, {"ok": True})
         if path == "/api/events":
             for ev in body.get("events", []):
@@ -842,6 +1055,14 @@ class Handler(BaseHTTPRequestHandler):
             with STORE.lock:
                 if q in STORE.clients:
                     STORE.clients.remove(q)
+
+
+def _shutdown():
+    try:
+        STORE.dirty = True
+        STORE.save()
+    finally:
+        os._exit(0)
 
 
 def cmd_serve(args):
@@ -902,15 +1123,19 @@ def cmd_install(args):
         with open(TOKEN_PATH, "w") as f:
             f.write(args.token)
         os.chmod(TOKEN_PATH, 0o600)
-    cfg = {"server": args.server or f"http://127.0.0.1:{getattr(args, 'port', DEFAULT_PORT)}", "token": token,
-           "label": args.label or "", "approval_timeout": args.approval_timeout}
+    cfg = _read_config()
+    cfg.update({"server": args.server or f"http://127.0.0.1:{getattr(args, 'port', DEFAULT_PORT)}", "token": token,
+                "label": args.label or "", "approval_timeout": args.approval_timeout})
     with open(CONFIG_PATH, "w") as f:
         json.dump(cfg, f, indent=2)
     os.chmod(CONFIG_PATH, 0o600)
 
     if _plugin_enabled():
         print("  ! The agent-cockpit Claude Code plugin is enabled; it already provides these hooks.")
-        print("    Skipping settings.json so events are not reported twice (disable the plugin to use this instead).")
+        print("    Skipping hooks so events are not reported twice (disable the plugin to use this instead).")
+        if not getattr(args, "no_statusline", False):
+            args.state = "on"
+            cmd_statusline(args)
         return
     ver = claude_version()
     events = list(ALL_EVENTS)
@@ -935,8 +1160,72 @@ def cmd_install(args):
     os.makedirs(CLAUDE_DIR, exist_ok=True)
     with open(SETTINGS_PATH, "w") as f:
         json.dump(settings, f, indent=2)
+    if not getattr(args, "no_statusline", False):
+        args.state = "on"
+        cmd_statusline(args)
     print(f"  ✓ hooks installed for {len(events)} events (claude {'.'.join(map(str, ver)) if ver else 'version unknown'})")
     print(f"  ✓ reporting to {cfg['server']}" + (f" as '{cfg['label']}'" if cfg["label"] else ""))
+
+
+def _read_config():
+    try:
+        with open(CONFIG_PATH) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _write_config(cfg):
+    os.makedirs(BASE, exist_ok=True)
+    with open(CONFIG_PATH, "w") as f:
+        json.dump(cfg, f, indent=2)
+    os.chmod(CONFIG_PATH, 0o600)
+
+
+def cmd_statusline(args):
+    """Route Claude Code's statusline through the relay so the dashboard gets account rate limits
+    (5-hour / weekly) and per-session cost. Any statusline you already had keeps rendering."""
+    os.makedirs(BASE, exist_ok=True)
+    dst = os.path.join(BASE, "hook.py")
+    src = os.path.join(HERE, "hook.py")
+    if os.path.abspath(src) != os.path.abspath(dst):
+        shutil.copy2(src, dst)
+    settings = {}
+    if os.path.exists(SETTINGS_PATH):
+        with open(SETTINGS_PATH) as f:
+            settings = json.load(f)
+        shutil.copy2(SETTINGS_PATH, SETTINGS_PATH + time.strftime(".bak-agent-cockpit-%Y%m%d-%H%M%S"))
+    cfg = _read_config()
+    cur = settings.get("statusLine") or {}
+    ours = HOOK_MARK in (cur.get("command") or "")
+    if args.state == "off":
+        if ours:
+            orig = cfg.pop("statusline_original", None)
+            cfg.pop("statusline_command", None)
+            if orig:
+                settings["statusLine"] = orig
+            else:
+                settings.pop("statusLine", None)
+            _write_config(cfg)
+            with open(SETTINGS_PATH, "w") as f:
+                json.dump(settings, f, indent=2)
+        print("  ✓ statusline relay off" + (" (your previous statusline is restored)" if ours and cfg is not None else ""))
+        return
+    if not ours:
+        if cur:
+            cfg["statusline_original"] = cur
+            if cur.get("type", "command") == "command" and cur.get("command"):
+                cfg["statusline_command"] = cur["command"]
+        _write_config(cfg)
+    py = shutil.which("python3") or sys.executable
+    new = dict(cfg.get("statusline_original") or {})
+    new.update({"type": "command", "command": f'"{py}" "{dst}" --statusline'})
+    new.setdefault("refreshInterval", 60)
+    settings["statusLine"] = new
+    with open(SETTINGS_PATH, "w") as f:
+        json.dump(settings, f, indent=2)
+    print("  ✓ statusline relay on — account limits (5-hour / weekly) and session cost reach the dashboard"
+          + (f"\n    your existing statusline still renders: {cfg['statusline_command']}" if cfg.get("statusline_command") else ""))
 
 
 def _plugin_enabled():
@@ -974,6 +1263,8 @@ def cmd_uninstall(args):
     with open(SETTINGS_PATH, "w") as f:
         json.dump(settings, f, indent=2)
     print("  ✓ Agent Cockpit hooks removed")
+    args.state = "off"
+    cmd_statusline(args)
     if getattr(args, "keep_autostart", False) is False:
         try:
             args.state = "off"
@@ -1173,6 +1464,7 @@ def main():
         p.add_argument("--token")
         p.add_argument("--label")
         p.add_argument("--approval-timeout", type=int, default=300)
+        p.add_argument("--no-statusline", action="store_true", help="don't route the statusline (no account limits)")
 
     st = sub.add_parser("setup", help="install hooks, start at login, open the dashboard")
     install_opts(st)
@@ -1202,10 +1494,12 @@ def main():
     a = sub.add_parser("autostart", help="start the dashboard at login")
     a.add_argument("state", choices=["on", "off"])
     a.add_argument("--port", type=int, default=DEFAULT_PORT)
+    sl = sub.add_parser("statusline", help="relay the statusline for account limits (keeps your existing one)")
+    sl.add_argument("state", choices=["on", "off"])
     sub.add_parser("status", help="show config and server health")
     args = ap.parse_args()
     {"setup": cmd_setup, "serve": cmd_serve, "start": cmd_start, "stop": cmd_stop, "install": cmd_install,
-     "uninstall": cmd_uninstall, "connect": cmd_connect, "autostart": cmd_autostart, "status": cmd_status}[args.cmd](args)
+     "uninstall": cmd_uninstall, "connect": cmd_connect, "autostart": cmd_autostart, "statusline": cmd_statusline, "status": cmd_status}[args.cmd](args)
 
 
 if __name__ == "__main__":

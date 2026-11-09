@@ -136,6 +136,32 @@ class SmokeTest(unittest.TestCase):
         dec = json.loads(out["v"])["hookSpecificOutput"]["decision"]
         self.assertEqual(dec, {"behavior": "deny", "message": "not that file"})
 
+    def test_statusline_limits_and_account(self):
+        now = int(time.time())
+        payload = {"session_id": "s5", "workspace": {"current_dir": "/tmp/p5"}, "model": {"id": "claude-opus-5-5", "display_name": "Opus 5.5"},
+                   "cost": {"total_cost_usd": 1.5, "total_lines_added": 10, "total_lines_removed": 2},
+                   "context_window": {"used_percentage": 12},
+                   "rate_limits": {"five_hour": {"used_percentage": 42.0, "resets_at": now + 3600},
+                                   "seven_day": {"used_percentage": 7.5, "resets_at": now + 86400}}}
+        r = subprocess.run([sys.executable, os.path.join(PKG, "hook.py"), "--statusline"], input=json.dumps(payload),
+                           capture_output=True, text=True, env=self.env, timeout=20)
+        self.assertIn("5h 42%", r.stdout)
+        st = self.api("GET", "/api/state")
+        lim = next(iter(st["limits"].values()))["rate_limits"]
+        self.assertEqual(lim["five_hour"]["used_percentage"], 42.0)
+        self.assertEqual(self.session("s5")["cost_usd"], 1.5)
+        # account totals include usage from hook events (test_lifecycle wrote 1 Opus 5.5 response)
+        self.assertIn("models", st["account"])
+
+    def test_pricing(self):
+        sys.path.insert(0, PKG)
+        import cli
+        e = {"model": "claude-opus-5-5", "in": 1_000_000, "out": 1_000_000, "cr": 1_000_000, "cw": 2_000_000, "cw1": 1_000_000}
+        # 4 + 20 + 0.2 + 1M*4*1.25 + 1M*4*2 = 37.2
+        self.assertAlmostEqual(cli.cost_of(e), 37.2, places=6)
+        self.assertEqual(cli.price_of("zai-org/GLM-5.3-Flash"), (0.0, 0.0, 0.0))
+        self.assertEqual(cli.price_of("claude-haiku-4-5-20251001"), (1.0, 5.0, 0.10))
+
     def test_offline_falls_through_fast(self):
         t0 = time.time()
         out = self.hook({"session_id": "s4", "hook_event_name": "PermissionRequest", "tool_name": "Bash", "tool_input": {}},

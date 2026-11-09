@@ -20,6 +20,7 @@ import time
 import urllib.error
 import urllib.request
 
+VERSION = "1.1.0"
 HOME = os.path.expanduser("~")
 BASE = os.path.join(HOME, ".claude", "agent-cockpit")
 CONFIG_PATH = os.path.join(BASE, "config.json")
@@ -123,6 +124,7 @@ def read_new_usage(path, max_bytes=8 * 1024 * 1024):
                     "out": u.get("output_tokens", 0) or 0,
                     "cr": u.get("cache_read_input_tokens", 0) or 0,
                     "cw": u.get("cache_creation_input_tokens", 0) or 0,
+                    "cw1": (u.get("cache_creation") or {}).get("ephemeral_1h_input_tokens", 0) or 0,
                     "ts": o.get("timestamp"),
                     "side": bool(o.get("isSidechain")),
                 }
@@ -243,6 +245,13 @@ def ensure_token(cfg):
         pass
 
 
+def _vtuple(v):
+    try:
+        return tuple(int(x) for x in str(v).split("."))
+    except Exception:
+        return (0,)
+
+
 def maybe_start_server(cfg):
     """Plugin installs ship cli.py next to this file: launch the local dashboard if it is down.
     Never on SSH sessions (those report through the tunnel to your laptop)."""
@@ -255,8 +264,16 @@ def maybe_start_server(cfg):
     if not os.path.exists(cli):
         return
     try:
-        urllib.request.urlopen(server + "/healthz", timeout=0.5)
-        return
+        with urllib.request.urlopen(server + "/healthz", timeout=0.5) as r:
+            running = json.loads(r.read() or b"{}").get("version")
+        if not running or _vtuple(running) >= _vtuple(VERSION):
+            return
+        # an older dashboard (e.g. from before a plugin update) is running: replace it
+        try:
+            http(cfg, "POST", "/api/shutdown", {}, timeout=2)
+        except Exception:
+            return
+        time.sleep(0.6)
     except Exception:
         pass
     try:
@@ -276,7 +293,49 @@ def maybe_start_server(cfg):
         pass
 
 
+def statusline():
+    """Statusline relay: forward Claude Code's statusline JSON (account rate limits, session cost)
+    to the dashboard, then render the user's original statusline (or a compact default)."""
+    raw = sys.stdin.read()
+    cfg = load_config()
+    try:
+        data = json.loads(raw) if raw.strip() else {}
+    except Exception:
+        data = {}
+    try:
+        http(cfg, "POST", "/api/statusline", {"payload": data, "host": host_info(cfg), "ts": time.time()}, timeout=0.4)
+    except Exception:
+        pass
+    orig = cfg.get("statusline_command")
+    if orig:
+        try:
+            import subprocess
+            r = subprocess.run(orig, shell=True, input=raw, capture_output=True, text=True, timeout=10)
+            sys.stdout.write(r.stdout)
+            return
+        except Exception:
+            pass
+    parts = []
+    m = (data.get("model") or {}).get("display_name")
+    if m:
+        parts.append(m)
+    rl = data.get("rate_limits") or {}
+    for key, label in (("five_hour", "5h"), ("seven_day", "7d")):
+        w = rl.get(key) or {}
+        if w.get("used_percentage") is not None:
+            parts.append(f"{label} {w['used_percentage']:.0f}%")
+    ctx = (data.get("context_window") or {}).get("used_percentage")
+    if ctx is not None:
+        parts.append(f"ctx {ctx:.0f}%")
+    cost = (data.get("cost") or {}).get("total_cost_usd")
+    if cost:
+        parts.append(f"${cost:.2f}")
+    sys.stdout.write(" · ".join(parts))
+
+
 def main():
+    if "--statusline" in sys.argv:
+        return statusline()
     raw = sys.stdin.read()
     try:
         payload = json.loads(raw) if raw.strip() else {}

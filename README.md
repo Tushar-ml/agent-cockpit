@@ -10,7 +10,8 @@ A live dashboard for every Claude Code session you run, on your laptop and on an
 - **Approvals in the browser**: Allow, Always allow (adds the suggested permission rule), Deny with a note to Claude, or hand back to the terminal. Shortcuts are `A`, `Shift+A` and `D`, with desktop notifications and a sound.
 - **Current work**: the running tool with the full command or edit diff, your last prompt, Claude's last reply, and the task list.
 - **Subagents**: type, task brief, current tool, tool calls, tokens, duration and result.
-- **Usage**: input, cache read/write and output tokens, a context-window gauge, tokens per hour over 24 h, and per-model and per-tool breakdowns.
+- **Usage per session**: input, cache read/write and output tokens, session cost, lines changed, a context-window gauge, tokens per hour over 24 h, and per-model and per-tool breakdowns.
+- **Account usage**: your plan's **5-hour and weekly limits** (percent used, reset countdown, trend) and any gateway spend limit. Also today / 7-day / 30-day / all-time token usage and API-equivalent cost, a daily chart, and breakdowns by model, project and machine. Covers every transcript on the machine plus every remote machine reporting in.
 - **Machines**: local and remote hosts grouped, with an SSH badge and the source IP. Sessions from the last 3 days are picked up from local transcripts.
 
 Python 3.8+ standard library only, with no dependencies.
@@ -26,9 +27,10 @@ pip install .
 cockpit setup
 ```
 
-`cockpit setup` does three things:
+`cockpit setup` does four things:
 
 - Adds the hooks to `~/.claude/settings.json` (backing up the file first).
+- Routes the status line through the relay so plan limits reach the dashboard. A status line you already have keeps rendering.
 - Starts the dashboard at login (launchd on macOS, a systemd user service on Linux).
 - Opens **http://localhost:7777**.
 
@@ -43,7 +45,9 @@ Inside Claude Code:
 /plugin install agent-cockpit@agent-cockpit
 ```
 
-The plugin brings its own hooks, so it doesn't edit `settings.json`. It also starts the dashboard in the background the first time a local session starts. Open the dashboard with `/agent-cockpit:dashboard`, or go to http://localhost:7777.
+The plugin brings its own hooks, so it doesn't edit `settings.json`. It also starts the dashboard in the background the first time a local session starts, and replaces an older running version after a plugin update. Open the dashboard with `/agent-cockpit:dashboard`, or go to http://localhost:7777.
+
+Plugins can't set the status line, so for plan limits run `/agent-cockpit:account-limits` once.
 
 Use one option or the other, not both. Otherwise every event is reported twice. `cockpit install` detects the plugin and skips its own hooks.
 
@@ -75,6 +79,7 @@ Claude Code on the VM then reports through the tunnel to the dashboard on your l
 | `cockpit install` / `uninstall` | add or remove hooks in `~/.claude/settings.json` (uninstall also removes the login item) |
 | `cockpit connect user@host [ssh args]` | set up a remote machine and SSH in with a tunnel |
 | `cockpit autostart on\|off` | start at login (launchd or systemd) |
+| `cockpit statusline on\|off` | relay the status line for plan limits (keeps and restores your own) |
 | `cockpit status` | show config and whether the dashboard is reachable |
 
 `agent-cockpit` is the same command under a longer name. `--approval-timeout SECONDS` (default 300) sets how long an approval waits before going to the terminal prompt.
@@ -95,6 +100,12 @@ Claude Code runs `hook.py` on 13 lifecycle events: session start and end, prompt
 For **PermissionRequest**, the hook waits for your click and returns the decision to Claude Code. If the dashboard is down, it exits in about 0.1 s and you get the normal terminal prompt.
 
 > While the dashboard is running, a permission request waits in the browser first. The terminal prompt appears only after you click **Answer in terminal** or the timeout passes. If another tool also handles `PermissionRequest`, both run.
+
+## Account usage: where the numbers come from
+
+- **Plan limits**: Claude Code passes `rate_limits.five_hour` and `rate_limits.seven_day` (percent used and reset time) to the status line. This happens for claude.ai Pro, Max and Ultra subscribers after the first response in a session. The relay forwards them, then runs your original status line command. Each machine reports its own account, so a VM logged in to a different account shows up separately.
+- **Session cost**: `cost.total_cost_usd` from the same status line input.
+- **History and estimates**: every assistant response in `~/.claude/projects/**/*.jsonl` (subagent transcripts included), plus usage that remote hooks send. Responses are deduplicated by message id, and costs use Anthropic API list prices, with 5-minute and 1-hour cache writes priced separately. On a subscription these are API-equivalent figures, not a bill. Non-Anthropic models routed through Claude Code count as $0.
 
 ## Security
 
