@@ -20,7 +20,7 @@ import time
 import urllib.error
 import urllib.request
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 HOME = os.path.expanduser("~")
 BASE = os.path.join(HOME, ".claude", "agent-cockpit")
 CONFIG_PATH = os.path.join(BASE, "config.json")

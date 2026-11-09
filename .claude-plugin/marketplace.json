@@ -7,7 +7,7 @@
       "name": "agent-cockpit",
       "source": "./",
       "description": "Live dashboard for Claude Code: status, browser approvals, subagents, current work and token usage across local and SSH machines.",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "category": "productivity"
     }
   ]

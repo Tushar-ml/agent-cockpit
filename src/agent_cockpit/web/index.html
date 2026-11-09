@@ -777,7 +777,10 @@ function toolLeaves(counts, liveTool, max){
 }
 function buildTree(s){
   const subs = s.subagents||{};
-  const mainCounts = s.main_tool_counts || s.tool_counts || {};
+  // main agent = all tool calls minus those made inside subagents (works for sessions recorded before per-agent counts existed)
+  const mainCounts = {...(s.tool_counts||{})};
+  for (const sa of Object.values(subs)) for (const [n,c] of Object.entries(sa.tool_counts||{})) mainCounts[n] = Math.max(0,(mainCounts[n]||0)-c);
+  for (const k of Object.keys(mainCounts)) if (!mainCounts[k]) delete mainCounts[k];
   const root = {kind:"session", s, children:[]};
   const nodes = {};
   for (const sa of Object.values(subs)) nodes[sa.key] = {kind:"agent", sa, children:[]};
@@ -815,7 +818,7 @@ function agentTreeCard(s){
   })(root);
   const subs = Object.values(s.subagents||{});
   const sel = S.treeSel && s.subagents?.[S.treeSel];
-  const empty = !subs.length && !Object.keys(s.main_tool_counts||s.tool_counts||{}).length;
+  const empty = !subs.length && !Object.keys(s.tool_counts||{}).length;
   return `<div class="card"><div class="card-h">${ic("bot")}Agent tree<span class="sub">${subs.filter(x=>x.status==="running").length} running · ${subs.length} subagents · ${s.tools_total||0} tool calls</span></div>
     ${empty?`<div class="card-b muted">No tool calls yet. When Claude runs tools or spins up subagents, they branch out here live.</div>`:`
     <div class="tree-wrap"><div class="tree" style="width:${W}px;height:${H}px">
