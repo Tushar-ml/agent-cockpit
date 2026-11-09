@@ -922,7 +922,7 @@ function sessionView(s){
       <div class="lbl">${esc(m.l)}<span class="el">for <span data-since="${s.status_since}"></span> · last event <span data-ago="${s.last_ts}"></span> ago</span></div>
       <div class="detail">${esc(st==="quiet"?"No events for a while — Claude may be generating a long response or the process stopped.":s.status_detail)}</div>
       ${curHtml}${question}
-      ${s.prompt?`<div class="bubble"><span class="who">Your last prompt</span>${esc(s.prompt.slice(0,2000))}</div>`:""}
+      ${s.prompt?`<div class="bubble"><span class="who">${s.prompt.startsWith("<task-notification>")?"Last event":"Your last prompt"}</span>${esc(cleanPrompt(s.prompt).slice(0,2000))}</div>`:""}
       ${s.last_reply && !cur ? `<details data-k="reply"><summary class="muted" style="cursor:pointer;margin-top:10px;font-size:12.5px">Claude's last reply</summary><div class="bubble">${esc(s.last_reply)}</div></details>`:""}
     </div>
   </div>
@@ -951,6 +951,21 @@ function sessionTabs(s, subs){
   const nf = Object.keys(s.files||{}).length;
   const t = (k, icon, label, extra) => `<button data-stab="${k}" class="${S.stab===k?"on":""}">${ic(icon)}${label}${extra||""}</button>`;
   return `<div class="stabs">${t("activity","list","Activity")}${t("trace","clock","Trace")}${t("tree","bot","Agent tree", run?`<span class="live-dot" title="${run} running"></span>`: subs.length?`<span class="cnt">${subs.length}</span>`:"")}${t("files","file","Hot files", nf?`<span class="cnt">${nf}</span>`:"")}</div>`;
+}
+
+/* ---------- prompts: make harness-injected messages readable */
+function cleanPrompt(p){
+  p = String(p||"");
+  if (p.startsWith("<task-notification>")){
+    const g = k => (p.match(new RegExp(`<${k}>([\\s\\S]*?)</${k}>`))||[])[1]||"";
+    const st = g("status"), sum = g("summary").trim();
+    return `⚙ Background task ${st||"update"}${sum?` — ${sum}`:""}`;
+  }
+  if (/^<(bash-input|bash-stdout|command-name|local-command)/.test(p)){
+    const cmd = (p.match(/<bash-input>([\s\S]*?)<\/bash-input>/)||p.match(/<command-name>([\s\S]*?)<\/command-name>/)||[])[1];
+    return cmd ? `$ ${cmd.trim()}` : p.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
+  }
+  return p;
 }
 
 /* ---------- command palette */
@@ -1020,7 +1035,7 @@ const LIVE = ["running","thinking","subagents","awaiting_approval"];
 function traceModel(s){
   const evs = (s.events||[]).slice().sort((a,b)=>a.t-b.t);
   const turns = [];
-  evs.forEach((e,i)=>{ if (e.kind==="UserPromptSubmit") turns.push({start:e.t, prompt:e.text||"", i}); });
+  evs.forEach((e,i)=>{ if (e.kind==="UserPromptSubmit") turns.push({start:e.t, prompt:cleanPrompt(e.text), i}); });
   if (!turns.length && evs.length) turns.push({start:evs[0].t, prompt:"(earlier activity)", i:0});
   turns.forEach((t,k)=>{ t.end = k+1<turns.length ? turns[k+1].start : null; });
   return {evs, turns};
@@ -1387,7 +1402,7 @@ function timeline(s){
     let icn="zap", cls="", head=esc(e.kind), x=esc(e.text||""), mono=false, r="";
     const agent = e.agent && subs[e.agent] ? `<span class="agent">↳ ${esc(subs[e.agent].type)}</span>` : "";
     switch(e.kind){
-      case "UserPromptSubmit": icn="user"; cls="prompt"; head="You"; break;
+      case "UserPromptSubmit": icn="user"; cls="prompt"; head=(e.text||"").startsWith("<task-notification>")?"Background task":"You"; x=esc(cleanPrompt(e.text)); break;
       case "Stop": icn="sparkle"; cls="ok"; head="Claude finished the turn"; break;
       case "StopFailure": icn="alert"; cls="bad"; head="Turn failed"; break;
       case "PreToolUse": icn=toolIcon(e.tool); head=`${esc(toolName(e.tool))} <span class="muted" style="font-weight:500">running…</span>`; mono=true; break;
