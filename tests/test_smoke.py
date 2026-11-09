@@ -186,6 +186,9 @@ class SmokeTest(unittest.TestCase):
         self.assertEqual(f("echo x >> log.md 2>/dev/null && head -5 README.md", "/r"), [("/r/log.md", "e"), ("/r/README.md", "r")])
         self.assertEqual(f("python3 - <<'EOF'\np='README.md'\ns=open(p).read()\nopen(p,'w').write(s)\nEOF", "/r"), [("/r/README.md", "e")])
         self.assertEqual(f("git commit -m 'msg > x.md'", "/r"), [])
+        self.assertEqual(f('git commit -qm "fix\n\nsed -i, perl -i, cat/head/tail reads" && git push', "/r"), [])
+        self.assertEqual(f("TOK=$(cat ~/t); curl -s localhost:7777/api/state", "/r"), [(os.path.expanduser("~/t"), "r")])
+        self.assertEqual(f("mv src/old_pkg src/new_pkg && cp -r a b", "/r"), [])
         # live hook path: markdown edited through Bash shows up in Hot files
         self.hook({"session_id": "s7", "cwd": "/tmp/p7", "hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_use_id": "b1",
                    "tool_input": {"command": "cat > NOTES.md <<'EOF'\nhi\nEOF"}})

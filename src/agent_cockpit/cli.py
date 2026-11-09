@@ -44,7 +44,7 @@ STATE_PATH = os.path.join(BASE, "state.json")
 SETTINGS_PATH = os.path.join(CLAUDE_DIR, "settings.json")
 HOOK_MARK = "agent-cockpit/hook.py"
 DEFAULT_PORT = 7777
-__version__ = "1.2.2"
+__version__ = "1.2.3"
 
 MAX_EVENTS = 400
 SCAN_DAYS = 3
@@ -189,9 +189,18 @@ _PY_OPEN_W = re.compile(r"open\(\s*(?:(['\"])([^'\"\n]+)\1|([A-Za-z_]\w*))\s*,\s
 _PY_WRITE_TEXT = re.compile(r"Path\(\s*(['\"])([^'\"\n]+)\1\s*\)\.write_(?:text|bytes)")
 
 
+_HOSTPORT = re.compile(r"^[\w.-]+:\d+(/|$)")
+
+
 def _looks_like_path(t):
     return (bool(t) and not t.startswith("-") and len(t) < 400 and not any(c in t for c in "*?$`{}\n")
-            and not t.startswith("/dev/") and not t.isdigit() and ("." in t or "/" in t))
+            and not t.startswith("/dev/") and not t.isdigit() and ("." in t or "/" in t)
+            and "://" not in t and not _HOSTPORT.match(t) and not t.endswith(","))
+
+
+def _is_break(t):
+    # shlex glues adjacent punctuation (e.g. ");" or "|&"), so treat any all-punctuation token with a separator as a break
+    return t in _SEGMENT_BREAK or (bool(t) and set(t) <= set(";&|()<>") and any(c in t for c in ";|()") ) or t == "&&"
 
 
 def _resolve(t, base):
@@ -200,21 +209,50 @@ def _resolve(t, base):
 
 
 def _split_heredocs(cmd):
-    """Return [(line, [heredoc bodies])] with heredoc bodies cut out of the shell text."""
-    out, lines, i = [], cmd.split("\n"), 0
-    while i < len(lines):
-        line = lines[i]
-        delims = [m.group(2) for m in _HEREDOC.finditer(line)]
-        bodies = []
-        i += 1
-        for d in delims:
-            body = []
-            while i < len(lines) and lines[i].strip() != d:
-                body.append(lines[i])
+    """Split shell text into logical lines [(line, [heredoc bodies])].
+    Newlines inside quotes stay part of the line (multi-line strings such as commit messages),
+    and heredoc bodies are cut out so their contents are never parsed as commands."""
+    out, buf, quote, i, n = [], [], None, 0, len(cmd)
+    while i < n:
+        c = cmd[i]
+        if quote:
+            buf.append(c)
+            if c == "\\" and quote == '"' and i + 1 < n:
+                buf.append(cmd[i + 1])
                 i += 1
+            elif c == quote:
+                quote = None
             i += 1
-            bodies.append("\n".join(body))
-        out.append((line, bodies))
+            continue
+        if c in "'\"":
+            quote = c
+            buf.append(c)
+        elif c == "\\" and i + 1 < n:
+            buf.append(c + cmd[i + 1])
+            i += 1
+        elif c == "\n":
+            line = "".join(buf)
+            buf = []
+            i += 1
+            bodies = []
+            for m in _HEREDOC.finditer(line):
+                body = []
+                while i < n:
+                    j = cmd.find("\n", i)
+                    j = n if j < 0 else j
+                    row = cmd[i:j]
+                    i = j + 1
+                    if row.strip() == m.group(2):
+                        break
+                    body.append(row)
+                bodies.append("\n".join(body))
+            out.append((line, bodies))
+            continue
+        else:
+            buf.append(c)
+        i += 1
+    if buf:
+        out.append(("".join(buf), []))
     return out
 
 
@@ -248,7 +286,7 @@ def shell_file_ops(cmd, cwd, verify_python=False):
             continue
         segs, cur = [], []
         for t in toks:
-            if t in _SEGMENT_BREAK:
+            if _is_break(t):
                 if cur:
                     segs.append(cur)
                 cur = []
@@ -325,9 +363,11 @@ def shell_file_ops(cmd, cwd, verify_python=False):
                 if not _looks_like_path(dest) and dest not in (".", ".."):
                     continue
                 dpath = _resolve(dest, base)
+                if "-r" in args or "-R" in args or "-a" in args:
+                    continue  # recursive copies move directories, not individual files
                 for src in pos[:-1]:
-                    if not _looks_like_path(src):
-                        continue
+                    if not _looks_like_path(src) or "." not in os.path.basename(src.rstrip("/")):
+                        continue  # no extension: almost always a directory
                     target = os.path.join(dpath, os.path.basename(src)) if dest.endswith("/") or dest in (".", "..") or os.path.isdir(dpath) else dpath
                     ops.append((target, "w"))
                     if prog == "cp":
@@ -345,6 +385,8 @@ def shell_file_ops(cmd, cwd, verify_python=False):
                     ops += [o for o in _python_writes(code, base) if not verify_python or os.path.exists(o[0])]
     seen, out = set(), []
     for pth, k in ops:  # one entry per (path, kind) per command
+        if "$" in pth or "`" in pth:
+            continue
         if (pth, k) not in seen:
             seen.add((pth, k))
             out.append((pth, k))
@@ -395,8 +437,12 @@ class Store:
                     s["status_detail"] = "Dashboard restarted — waiting for next event"
                 s["pending"] = []
             self.scan_offsets = d.get("scan_offsets", {})
-            if d.get("files_v") != 2:
-                self.scan_offsets = {}  # re-read recent transcripts once to pick up file history (usage is deduped)
+            if d.get("files_v") != 3:
+                # file-tracking rules changed: drop file history and re-read recent transcripts once (usage is deduped)
+                self.scan_offsets = {}
+                for sid, s in self.sessions.items():
+                    s["files"] = {}
+                    self.seen_tools[sid] = set()
             self.limits = d.get("limits", {})
             self.limit_hist = d.get("limit_hist", {})
             acct = d.get("account") or {}
@@ -427,7 +473,7 @@ class Store:
                 sess[sid] = c
             data = {"sessions": sess, "hosts": self.hosts, "scan_offsets": self.scan_offsets,
                     "account": self.account, "acct_ids": list(self.acct_ids),
-                    "limits": self.limits, "limit_hist": self.limit_hist, "files_v": 2}
+                    "limits": self.limits, "limit_hist": self.limit_hist, "files_v": 3}
             self.dirty = False
         tmp = STATE_PATH + ".tmp"
         with open(tmp, "w") as f:
