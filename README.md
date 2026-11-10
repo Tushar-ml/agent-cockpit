@@ -13,6 +13,11 @@ A live dashboard for every Claude Code session you run, on your laptop and on an
 - **Usage per session**: input, cache read/write and output tokens, session cost, lines changed, a context-window gauge, tokens per hour over 24 h, and per-model and per-tool breakdowns.
 - **Agent tree**: a live graph of each session. The main agent branches into its subagents (nested ones too), and each agent into the tools it used, with counts. Subagents that are working glow, their edges animate, and the tool running right now is highlighted. Click a subagent to see its brief and result.
 - **Hot files**: a treemap of every file Claude read, edited or created, grouped by folder and sized by how often it was touched. Files touched in the last 90 seconds glow. You can view one session or the whole project across sessions, with lines added and removed. File history from local transcripts is included.
+- **Board**: a Jira-style board with the columns Backlog → Running → Needs you → Review → Done.
+  - Every session becomes a card in the column that matches its live status. A finished turn that changed files lands in Review until you mark it done (✓, or drag it).
+  - You can add your own task cards with a prompt, priority, goal and repo. Link a card to a session and it follows that session's status.
+  - Goals group cards and show progress and spend. "Copy start command" gives you a ready-to-paste `claude` command for the task.
+  - Shortcuts: `n` adds a card; ⌘K finds any card.
 - **Trace**: a waterfall for each prompt. Every tool call is a bar on a time axis, subagent work is nested under the subagent that did it, approval waits show as amber hatching ("47s waiting on you"), and failures are red. Click any row to see its input and result, and step through turns with ‹ ›.
 - **Command palette (⌘K)**: jump to any session or view, approve or deny the waiting request, switch filters, theme and density.
 - **Live top bar**: plan limits, work in progress, "needs you", and today's spend and tokens, each with a sparkline and a change against your recent average, plus a tool-calls-per-minute strip across all machines.

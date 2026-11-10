@@ -194,6 +194,23 @@ class SmokeTest(unittest.TestCase):
                    "tool_input": {"command": "cat > NOTES.md <<'EOF'\nhi\nEOF"}})
         self.assertEqual(self.session("s7")["files"]["/tmp/p7/NOTES.md"]["w"], 1)
 
+    def test_board(self):
+        c = self.api("POST", "/api/board/card", {"title": "Ship it", "goal": "v2", "prio": 9, "col": "nope"})
+        self.assertEqual((c["col"], c["prio"], c["goal"]), ("backlog", 3, "v2"))  # invalid col -> backlog, prio clamped
+        c2 = self.api("POST", "/api/board/card", {"id": c["id"], "col": "review"})
+        self.assertEqual((c2["col"], c2["title"]), ("review", "Ship it"))      # partial update keeps fields
+        self.assertEqual(self.api("GET", "/api/state")["board"]["cards"][c["id"]]["col"], "review")
+        # session override sticks to the current turn count
+        self.hook({"session_id": "s8", "cwd": "/tmp/p8", "hook_event_name": "UserPromptSubmit", "prompt": "go"})
+        self.assertTrue(self.api("POST", "/api/board/session/s8", {"col": "done"})["ok"])
+        ov = self.api("GET", "/api/state")["board"]["overrides"]["s8"]
+        self.assertEqual((ov["col"], ov["turns"]), ("done", 1))
+        self.api("POST", "/api/board/session/s8", {"col": None})
+        self.assertNotIn("s8", self.api("GET", "/api/state")["board"]["overrides"])
+        self.assertFalse(self.api("POST", "/api/board/session/nope", {"col": "done"})["ok"])
+        self.assertTrue(self.api("POST", f"/api/board/card/{c['id']}/delete")["ok"])
+        self.assertNotIn(c["id"], self.api("GET", "/api/state")["board"]["cards"])
+
     def test_pricing(self):
         sys.path.insert(0, PKG)
         import cli

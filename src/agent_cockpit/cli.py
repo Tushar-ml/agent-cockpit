@@ -44,7 +44,7 @@ STATE_PATH = os.path.join(BASE, "state.json")
 SETTINGS_PATH = os.path.join(CLAUDE_DIR, "settings.json")
 HOOK_MARK = "agent-cockpit/hook.py"
 DEFAULT_PORT = 7777
-__version__ = "1.3.1"
+__version__ = "1.4.0"
 
 MAX_EVENTS = 600
 SCAN_DAYS = 3
@@ -418,6 +418,7 @@ class Store:
         self.limits = {}      # host key -> latest statusline rate_limits snapshot
         self.limit_hist = {}  # host key -> [[ts, five_hour_pct, seven_day_pct], ...]
         self.sl_sig = {}
+        self.board = {"cards": {}, "overrides": {}}
         self._cwd_hint = {}
         self.dirty = False
         self.load()
@@ -444,6 +445,8 @@ class Store:
                     s["files"] = {}
                     self.seen_tools[sid] = set()
             self.limits = d.get("limits", {})
+            b = d.get("board") or {}
+            self.board = {"cards": b.get("cards") or {}, "overrides": b.get("overrides") or {}}
             self.limit_hist = d.get("limit_hist", {})
             acct = d.get("account") or {}
             if acct.get("v") == ACCOUNT_VERSION:
@@ -473,7 +476,8 @@ class Store:
                 sess[sid] = c
             data = {"sessions": sess, "hosts": self.hosts, "scan_offsets": self.scan_offsets,
                     "account": self.account, "acct_ids": list(self.acct_ids),
-                    "limits": self.limits, "limit_hist": self.limit_hist, "files_v": 3}
+                    "limits": self.limits, "limit_hist": self.limit_hist, "files_v": 3,
+                    "board": self.board}
             self.dirty = False
         tmp = STATE_PATH + ".tmp"
         with open(tmp, "w") as f:
@@ -584,6 +588,59 @@ class Store:
                 if len(hb) > 72:
                     for k in sorted(hb)[:-72]:
                         hb.pop(k, None)
+
+    # ---------- board (task cards + manual column overrides for session cards)
+    BOARD_COLS = ("backlog", "running", "needs", "review", "done")
+
+    def _push_board(self):
+        self.dirty = True
+        self.broadcast({"type": "board", "board": self.board})
+
+    def board_upsert(self, body):
+        def clip(v, n):
+            return str(v or "")[:n]
+        with self.lock:
+            cid = clip(body.get("id"), 40) or secrets.token_hex(5)
+            cur = self.board["cards"].get(cid, {"id": cid, "created": time.time()})
+            for k, n in (("title", 200), ("notes", 8000), ("goal", 80), ("cwd", 500), ("session", 80)):
+                if k in body:
+                    cur[k] = clip(body[k], n)
+            if "col" in body:
+                col = body["col"] if body["col"] in self.BOARD_COLS else "backlog"
+                if col != cur.get("col"):
+                    cur["moved"] = time.time()
+                cur["col"] = col
+            if "prio" in body:
+                try:
+                    cur["prio"] = max(0, min(3, int(body["prio"])))
+                except Exception:
+                    pass
+            cur.setdefault("col", "backlog")
+            cur.setdefault("title", "Untitled task")
+            cur["updated"] = time.time()
+            self.board["cards"][cid] = cur
+            self._push_board()
+            return cur
+
+    def board_delete(self, cid):
+        with self.lock:
+            ok = self.board["cards"].pop(cid, None) is not None
+            if ok:
+                self._push_board()
+            return ok
+
+    def board_override(self, sid, col):
+        with self.lock:
+            s = self.sessions.get(sid)
+            if not s:
+                return False
+            if col in self.BOARD_COLS:
+                # sticks until the session gets a new prompt
+                self.board["overrides"][sid] = {"col": col, "turns": s.get("turns", 0), "ts": time.time()}
+            else:
+                self.board["overrides"].pop(sid, None)
+            self._push_board()
+            return True
 
     def account_add(self, e, project, host_key):
         mid = e.get("id")
@@ -1187,6 +1244,7 @@ class Store:
                 "account": self.account_public(),
                 "limits": self.limits,
                 "limit_hist": {k: v[-1500:] for k, v in self.limit_hist.items()},
+                "board": self.board,
                 "server": {"hostname": local_hostname(), "time": time.time(), "version": __version__},
             }
 
@@ -1314,6 +1372,14 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/event":
             STORE.ingest(body)
             return self._send(200, {"ok": True})
+        if path == "/api/board/card":
+            return self._send(200, STORE.board_upsert(body))
+        m = re.match(r"^/api/board/card/([\w-]+)/delete$", path)
+        if m:
+            return self._send(200, {"ok": STORE.board_delete(m.group(1))})
+        m = re.match(r"^/api/board/session/([\w-]+)$", path)
+        if m:
+            return self._send(200, {"ok": STORE.board_override(m.group(1), body.get("col"))})
         if path == "/api/shutdown":
             # used by a newer plugin version to replace this server
             self._send(200, {"ok": True})

@@ -304,6 +304,55 @@ body.compact .grid2{gap:12px} body.compact .stack{gap:12px}
 .stabs .live-dot{width:6px;height:6px;border-radius:50%;background:var(--s-sub);animation:breathe 1.6s ease-in-out infinite}
 .tabpane{margin-top:18px}
 
+/* board */
+.bd-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.bd-top h1{margin:0;font-size:22px;letter-spacing:-.025em;font-weight:650}
+.bd-top .sp{flex:1}
+.sel{height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-size:12.5px}
+.goals{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin-bottom:14px}
+.goal{flex:none;min-width:190px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;text-align:left}
+.goal.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.goal b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.goal .gm{display:flex;justify-content:space-between;font:500 11px "Geist Mono",monospace;color:var(--muted);margin:4px 0 6px}
+.goal .gb{height:4px;border-radius:2px;background:var(--surface-3);overflow:hidden}
+.goal .gb i{display:block;height:100%;background:var(--s-idle)}
+.board{display:grid;grid-template-columns:repeat(5,minmax(190px,1fr));gap:12px;align-items:start;overflow-x:auto;padding-bottom:8px}
+.col{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;min-height:200px;display:flex;flex-direction:column}
+.col.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--surface-2))}
+.col-h{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:12.5px;font-weight:600}
+.col-h .n{font:500 11px "Geist Mono",monospace;color:var(--muted);padding:0 6px;border-radius:99px;background:var(--surface-3)}
+.col-h i{width:8px;height:8px;border-radius:50%;background:var(--cc)}
+.col-h .add{margin-left:auto;border:0;background:transparent;color:var(--muted);border-radius:6px;padding:2px 6px}
+.col-h .add:hover{background:var(--surface-3);color:var(--text)}
+.col-b{display:flex;flex-direction:column;gap:8px;padding:0 8px 10px;flex:1}
+.col-empty{font-size:12px;color:var(--muted);text-align:center;padding:18px 6px;border:1px dashed var(--border);border-radius:9px}
+.kc{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 11px;cursor:grab;position:relative}
+.kc:hover{border-color:var(--border-strong)}
+.kc.dragging{opacity:.4}
+.kc.task{border-left:3px solid var(--accent)}
+.kc .k1{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;line-height:1.3}
+.kc .k1 span{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.kc .k2{font-size:12px;color:var(--text-2);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kc .k3{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:7px;font:500 11px "Geist Mono",monospace;color:var(--muted)}
+.kc .k3 .w{color:var(--s-appr)} .kc .k3 .g{color:var(--accent)}
+.kc .acts{position:absolute;top:6px;right:6px;display:none;gap:2px}
+.kc:hover .acts,.kc:focus-within .acts{display:flex}
+.kc .acts button{border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:2px 5px;color:var(--text-2);font-size:11px}
+.kc .acts button:hover{color:var(--text);border-color:var(--border-strong)}
+.kc .acts .svg{width:12px;height:12px}
+.prio{font:600 10px "Geist Mono",monospace;padding:0 5px;border-radius:4px;color:var(--pc);border:1px solid color-mix(in srgb,var(--pc) 50%,transparent)}
+.modal{position:fixed;inset:0;z-index:85;background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-start;padding-top:10vh}
+.modal[hidden]{display:none}
+.mbox{width:min(620px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--border-strong);border-radius:14px;box-shadow:var(--shadow-pop);animation:pop .14s ease-out}
+.mbox .mh{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border);font-weight:600}
+.mbox .mb{padding:14px 16px;display:grid;gap:10px}
+.mbox label{display:grid;gap:5px;font-size:12px;color:var(--muted)}
+.mbox input,.mbox textarea,.mbox select{font:inherit;font-size:13.5px;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;width:100%}
+.mbox textarea{min-height:120px;resize:vertical;font-family:"Geist Mono",monospace;font-size:12.5px}
+.mbox .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mbox .mf{display:flex;gap:8px;align-items:center;padding:12px 16px;border-top:1px solid var(--border)}
+.mbox .mf .sp{flex:1}
+
 /* command palette */
 .cmdk{position:fixed;inset:0;z-index:80;background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(3px);display:flex;justify-content:center;align-items:flex-start;padding-top:12vh}
 .cmdk[hidden]{display:none}
@@ -484,6 +533,7 @@ table.tbl .share i{display:block;height:100%;background:var(--c1);border-radius:
     <div class="search"><svg class="svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" placeholder="Search sessions, hosts, paths…" autocomplete="off"></div>
     <div class="seg" id="seg"><button data-f="active" class="on">Active</button><button data-f="all">All</button><button data-f="ended">History</button></div>
     <button class="navitem" id="navOverview"></button>
+    <button class="navitem" id="navBoard"></button>
     <button class="navitem" id="navAccount"></button>
     <div id="side"></div>
   </aside>
@@ -493,6 +543,7 @@ table.tbl .share i{display:block;height:100%;background:var(--c1);border-radius:
   </main>
 </div>
 <div id="tip"></div>
+<div class="modal" id="cardModal" hidden><div class="mbox" role="dialog" aria-label="Task card" id="cardBox"></div></div>
 <div class="cmdk" id="cmdk" hidden><div class="cmdk-box" role="dialog" aria-label="Command palette">
   <div class="cmdk-in"><svg class="svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="cmdkq" placeholder="Search sessions, jump anywhere, approve…" autocomplete="off" spellcheck="false"></div>
   <div class="cmdk-list" id="cmdkl"></div>
@@ -504,7 +555,8 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const S = { sessions:new Map(), hosts:new Map(), approvals:new Map(), sel:null, page:"overview", filter:"active", q:"", tl:"all", connected:false, skew:0,
   account:null, limits:{}, limitHist:{}, acctMetric:"cost", acctRange:30,
-  stab:"activity", treeSel:null, fileScope:"session", projFiles:{} };
+  stab:"activity", treeSel:null, fileScope:"session", projFiles:{},
+  board:{cards:{}, overrides:{}}, boardGoal:null, boardHost:"", boardSpan:"48h" };
 const prefs = (()=>{ try{ return JSON.parse(localStorage.getItem("cockpit")||"{}") }catch{ return {} } })();
 const savePrefs = ()=>{ try{ localStorage.setItem("cockpit", JSON.stringify(prefs)) }catch{} };
 
@@ -572,8 +624,9 @@ async function loadState(){
   S.sessions = new Map(d.sessions.map(s=>[s.id,s]));
   S.hosts = new Map(d.hosts.map(h=>[h.key,h]));
   S.approvals = new Map(d.approvals.map(a=>[a.id,a]));
-  S.account = d.account; S.limits = d.limits||{}; S.limitHist = d.limit_hist||{};
+  S.account = d.account; S.limits = d.limits||{}; S.limitHist = d.limit_hist||{}; S.board = d.board || S.board;
   if (!S.sel && location.hash==="#account") S.page="account";
+  else if (!S.sel && location.hash==="#board") S.page="board";
   else if (!S.sel && location.hash.length>1) S.sel = decodeURIComponent(location.hash.slice(1));
   if (S.sel && !S.sessions.has(S.sel)) S.sel = null;
   render();
@@ -596,6 +649,7 @@ function connect(){
       S.approvals.set(m.approval.id, m.approval);
       if (isNew) alertApproval(m.approval);
     } else if (m.type==="account"){ S.account = m.account; }
+    else if (m.type==="board"){ S.board = m.board; }
     else if (m.type==="limits"){ S.limits[m.host] = m.limits; S.limitHist[m.host] = m.hist; }
     else if (m.type==="remove"){ S.sessions.delete(m.id); if (S.sel===m.id) S.sel=null; }
     schedule();
@@ -773,7 +827,9 @@ function renderSide(){
   }
   if (!list.length) html = `<div class="empty-side">${S.sessions.size? "No sessions match this filter." : "No sessions yet. Start <code>claude</code> anywhere with the hooks installed."}</div>`;
   if (lastSig.side!==html){ morph($("#side"), html); lastSig.side=html; }
-  const nv=$("#navOverview"); nv.innerHTML=`${ic("grid")}Overview`; nv.classList.toggle("on", !S.sel && S.page!=="account");
+  const nv=$("#navOverview"); nv.innerHTML=`${ic("grid")}Overview`; nv.classList.toggle("on", !S.sel && S.page==="overview");
+  const needN = boardCounts().needs;
+  const nb=$("#navBoard"); nb.innerHTML=`${ic("list")}Board${needN?`<span class="badge warn" style="margin-left:auto">${needN} need you</span>`:""}`; nb.classList.toggle("on", !S.sel && S.page==="board");
   const lim = primaryLimits(); const fh = lim?.rate_limits?.five_hour?.used_percentage;
   const na=$("#navAccount"); na.innerHTML=`${ic("zap")}Account usage${fh!=null?`<span class="badge" style="margin-left:auto">5h ${Math.round(fh)}%</span>`:""}`; na.classList.toggle("on", !S.sel && S.page==="account");
 }
@@ -848,7 +904,7 @@ async function decide(aid, behavior){
 /* ---------- main view */
 function renderView(){
   const s = S.sel && S.sessions.get(S.sel);
-  const html = s ? sessionView(s) : S.page==="account" ? accountView() : overview();
+  const html = s ? sessionView(s) : S.page==="account" ? accountView() : S.page==="board" ? boardView() : overview();
   const v=$("#view");
   if (lastSig.view!==html){ morph(v, html); lastSig.view = html; }
   updateTimers();
@@ -953,6 +1009,160 @@ function sessionTabs(s, subs){
   return `<div class="stabs">${t("activity","list","Activity")}${t("trace","clock","Trace")}${t("tree","bot","Agent tree", run?`<span class="live-dot" title="${run} running"></span>`: subs.length?`<span class="cnt">${subs.length}</span>`:"")}${t("files","file","Hot files", nf?`<span class="cnt">${nf}</span>`:"")}</div>`;
 }
 
+/* ---------- board */
+const COLS = [["backlog","Backlog","var(--muted)"],["running","Running","var(--s-run)"],["needs","Needs you","var(--s-appr)"],["review","Review","var(--s-think)"],["done","Done","var(--s-idle)"]];
+const PRIO = [null,["P3","var(--muted)"],["P2","var(--s-run)"],["P1","var(--s-err)"]];
+function lastPromptT(s){ const e=(s.events||[]).filter(x=>x.kind==="UserPromptSubmit").pop(); return e?e.t:(s.started||0); }
+function changedFiles(s, since){ return Object.values(s.files||{}).filter(f=>(f.e||f.w) && f.last>=since).length; }
+function sessionCol(s){
+  const ov = S.board.overrides?.[s.id];
+  if (ov && ov.turns===s.turns) return ov.col;
+  const st = effStatus(s);
+  if (["awaiting_approval","waiting_input","error"].includes(st)) return "needs";
+  if (["running","thinking","subagents"].includes(st)) return "running";
+  // closed sessions only stay in Review for a few hours; after that they're history, not a to-do
+  if (st==="ended" && now()-s.last_ts > 6*3600) return "done";
+  return changedFiles(s, lastPromptT(s)) ? "review" : "done";
+}
+const sessionCost = s => s.cost_usd ?? s.usage?.cost ?? 0;
+function boardItems(){
+  const cards = Object.values(S.board.cards||{});
+  const linked = new Set(cards.map(c=>c.session).filter(Boolean));
+  const span = {"48h":48*3600,"7d":7*86400,"all":1e12}[S.boardSpan];
+  const items = [];
+  for (const c of cards){
+    const s = c.session && S.sessions.get(c.session);
+    const col = c.col==="done" ? "done" : s ? (c.col==="backlog" && sessionCol(s)==="done" && !changedFiles(s,0) ? "backlog" : sessionCol(s)) : c.col;
+    items.push({kind:"task", c, s, col, t: s ? s.last_ts : (c.moved||c.updated||c.created), goal:c.goal||""});
+  }
+  for (const s of S.sessions.values()){
+    if (linked.has(s.id)) continue;
+    const col = sessionCol(s);
+    if (now()-s.last_ts > span && col!=="needs") continue;
+    items.push({kind:"session", s, col, t:s.last_ts, goal:""});
+  }
+  return items.filter(x=>(!S.boardGoal || x.goal===S.boardGoal) && (!S.boardHost || (x.s && x.s.host===S.boardHost)));
+}
+function boardCounts(){ const n={}; for (const [k] of COLS) n[k]=0; for (const x of boardItems()) n[x.col]++; return n; }
+function kanbanCard(x){
+  const s = x.s, c = x.c, st = s ? effStatus(s) : null;
+  const subsRun = s ? Object.values(s.subagents||{}).filter(a=>a.status==="running").length : 0;
+  const changed = s ? changedFiles(s, lastPromptT(s)) : 0;
+  const key = x.kind==="task" ? "c:"+c.id : "s:"+s.id;
+  const title = x.kind==="task" ? c.title : (s.title || cleanPrompt(s.prompt) || s.project);
+  const sub = s ? (s.current ? `${toolName(s.current.tool)} · ${s.current.summary}` : /transcript history|no live hook/i.test(s.status_detail||"") ? "" : s.status_detail) : (c.notes||"").split("\n")[0];
+  const meta = [];
+  if (x.kind==="task" && c.goal) meta.push(`<span class="g">◎ ${esc(c.goal)}</span>`);
+  if (s) meta.push(`<span>${esc(s.project)}</span>`, `<span>${esc(hostOf(s).hostname)}</span>`);
+  if (s?.pending?.length) meta.push(`<span class="w">${s.pending.length} approval</span>`);
+  if (subsRun) meta.push(`<span>${subsRun} agents</span>`);
+  if (changed) meta.push(`<span>${changed} files changed</span>`);
+  if (s && sessionCost(s)) meta.push(`<span>${money(sessionCost(s))}</span>`);
+  meta.push(`<span>${ago(x.t)}</span>`);
+  const ov = s && S.board.overrides?.[s.id] && S.board.overrides[s.id].turns===s.turns;
+  const acts = x.kind==="task"
+    ? `<button data-cedit="${esc(c.id)}" title="Edit">${ic("edit")}</button>${x.col!=="done"?`<button data-cmove="${esc(c.id)}" data-col="done" title="Mark done">${ic("check")}</button>`:""}`
+    : `<button data-totask="${esc(s.id)}" title="Make this a task card (add goal, notes)">${ic("list")}</button>${x.col!=="done"?`<button data-smove="${esc(s.id)}" data-col="done" title="Mark reviewed / done">${ic("check")}</button>`:""}${ov?`<button data-smove="${esc(s.id)}" data-col="" title="Back to automatic column">↺</button>`:""}`;
+  const pr = x.kind==="task" && c.prio ? PRIO[c.prio] : null;
+  return `<div class="kc ${x.kind==="task"?"task":""}" draggable="true" data-key="${esc(key)}" data-drag="${esc(key)}" ${s?`data-open="${esc(s.id)}"`:`data-cedit="${esc(c.id)}"`} tabindex="0">
+    <div class="acts">${acts}</div>
+    <div class="k1">${s?sdot(st):ic("list",'style="width:13px;height:13px;color:var(--accent)"')}${pr?`<em class="prio" style="--pc:${pr[1]}">${pr[0]}</em>`:""}<span>${esc(title)}</span></div>
+    ${sub?`<div class="k2">${esc(sub)}</div>`:""}
+    <div class="k3">${meta.join("")}</div></div>`;
+}
+function boardView(){
+  const all = boardItems();
+  const by = {}; for (const [k] of COLS) by[k]=[];
+  for (const x of all) by[x.col].push(x);
+  for (const k in by) by[k].sort((a,b)=> (k==="backlog" ? ((b.c?.prio||0)-(a.c?.prio||0)) : 0) || b.t-a.t);
+  // goals
+  const goals = {};
+  for (const c of Object.values(S.board.cards||{})){ if(!c.goal) continue; const g = goals[c.goal] ||= {n:0,done:0,cost:0};
+    g.n++; const s=c.session&&S.sessions.get(c.session); if (c.col==="done" || (s && sessionCol(s)==="done")) g.done++; if (s) g.cost+=sessionCost(s); }
+  const goalRow = Object.keys(goals).length ? `<div class="goals">${Object.entries(goals).sort((a,b)=>b[1].n-a[1].n).map(([g,v])=>`<button class="goal ${S.boardGoal===g?"on":""}" data-goal="${esc(g)}"><b>◎ ${esc(g)}</b><div class="gm"><span>${v.done}/${v.n} done</span><span>${money(v.cost)}</span></div><div class="gb"><i style="width:${100*v.done/Math.max(1,v.n)}%"></i></div></button>`).join("")}</div>` : "";
+  const hosts = [...new Set([...S.sessions.values()].map(s=>s.host))];
+  return `<div class="bd-top"><h1>Board</h1>
+      <span class="muted" style="font-size:12.5px">Sessions sort themselves by status · add your own task cards · drag to move</span><span class="sp"></span>
+      ${S.boardGoal?`<button class="btn" data-goal="">◎ ${esc(S.boardGoal)} ✕</button>`:""}
+      <select class="sel" data-bhost>${[["","All machines"],...hosts.map(h=>[h, (S.hosts.get(h)||{}).hostname||h])].map(([v,l])=>`<option value="${esc(v)}" ${S.boardHost===v?"selected":""}>${esc(l)}</option>`).join("")}</select>
+      <select class="sel" data-bspan>${[["48h","Last 48h"],["7d","Last 7 days"],["all","All sessions"]].map(([v,l])=>`<option value="${v}" ${S.boardSpan===v?"selected":""}>${l}</option>`).join("")}</select>
+      <button class="btn primary" data-newcard="backlog">${ic("list")}New task</button></div>
+    ${goalRow}
+    <div class="board">${COLS.map(([k,l,c])=>`<section class="col" data-drop="${k}" data-key="col-${k}">
+      <div class="col-h" style="--cc:${c}"><i></i>${l}<span class="n">${by[k].length}</span>${k==="backlog"?`<button class="add" data-newcard="backlog" title="New task">+</button>`:""}</div>
+      <div class="col-b">${by[k].slice(0,60).map(kanbanCard).join("") || `<div class="col-empty">${{backlog:"Plan work here — add a task card",running:"Nothing running",needs:"Nothing waiting on you 🎉",review:"Finished turns with file changes land here",done:"Reviewed and finished work"}[k]}</div>`}</div>
+    </section>`).join("")}</div>`;
+}
+/* card editor */
+let editing = null;
+function openCard(id, preset={}){
+  const c = id ? {...S.board.cards[id]} : {title:"", notes:"", goal:"", col:"backlog", prio:0, cwd:"", session:"", ...preset};
+  editing = c;
+  const goals = [...new Set(Object.values(S.board.cards).map(x=>x.goal).filter(Boolean))];
+  const cwds = [...new Set([...S.sessions.values()].map(s=>s.cwd).filter(Boolean))].slice(0,40);
+  const sess = [...S.sessions.values()].sort((a,b)=>b.last_ts-a.last_ts).slice(0,60);
+  const shq = t => "'" + String(t).replace(/'/g, "'\\''") + "'";
+  $("#cardBox").innerHTML = `<div class="mh">${ic("list")}${id?"Edit task":"New task"}<span class="sp" style="flex:1"></span><button class="iconbtn" data-cclose title="Close">${ic("x")}</button></div>
+    <div class="mb">
+      <label>Title<input id="cf-title" value="${esc(c.title)}" placeholder="e.g. Add retry logic to the uploader" maxlength="200"></label>
+      <label>Prompt / notes<textarea id="cf-notes" placeholder="What should Claude do? This becomes the prompt when you start the task.">${esc(c.notes||"")}</textarea></label>
+      <div class="row">
+        <label>Goal<input id="cf-goal" list="cf-goals" value="${esc(c.goal||"")}" placeholder="Group related tasks" maxlength="80"><datalist id="cf-goals">${goals.map(g=>`<option value="${esc(g)}">`).join("")}</datalist></label>
+        <label>Priority<select id="cf-prio">${[[0,"None"],[3,"P1 · urgent"],[2,"P2 · soon"],[1,"P3 · later"]].map(([v,l])=>`<option value="${v}" ${(+c.prio||0)===v?"selected":""}>${l}</option>`).join("")}</select></label>
+      </div>
+      <div class="row">
+        <label>Repository / folder<input id="cf-cwd" list="cf-cwds" value="${esc(c.cwd||"")}" placeholder="/path/to/repo"><datalist id="cf-cwds">${cwds.map(x=>`<option value="${esc(x)}">`).join("")}</datalist></label>
+        <label>Column<select id="cf-col">${COLS.map(([k,l])=>`<option value="${k}" ${c.col===k?"selected":""}>${l}</option>`).join("")}</select></label>
+      </div>
+      <label>Linked session (card then follows its live status)<select id="cf-sess"><option value="">— none —</option>${sess.map(x=>`<option value="${esc(x.id)}" ${c.session===x.id?"selected":""}>${esc(x.project)} · ${esc((x.title||cleanPrompt(x.prompt)||"").slice(0,60))} · ${ago(x.last_ts)}</option>`).join("")}</select></label>
+    </div>
+    <div class="mf">${id?`<button class="btn bad" data-cdel="${esc(id)}">${ic("trash")}Delete</button>`:""}
+      <button class="btn" data-ccopy title="Copy a shell command that starts Claude Code on this task">${ic("terminal")}Copy start command</button>
+      <span class="sp"></span><button class="btn" data-cclose>Cancel</button><button class="btn primary" data-csave>${ic("check")}${id?"Save":"Create"}</button></div>`;
+  $("#cardModal").hidden = false;
+  $("#cardBox").dataset.id = id || "";
+  $("#cardBox")._shq = shq;
+  setTimeout(()=>$("#cf-title").focus(), 30);
+}
+function closeCard(){ $("#cardModal").hidden = true; editing = null; }
+async function saveCard(){
+  const id = $("#cardBox").dataset.id || undefined;
+  const body = {id, title:$("#cf-title").value.trim()||"Untitled task", notes:$("#cf-notes").value, goal:$("#cf-goal").value.trim(),
+    prio:+$("#cf-prio").value, cwd:$("#cf-cwd").value.trim(), col:$("#cf-col").value, session:$("#cf-sess").value};
+  try{ const c = await api("/api/board/card",{method:"POST", body:JSON.stringify(body)}); S.board.cards[c.id]=c; closeCard(); render(); toast(id?"Task saved":"Task created"); }
+  catch(e){ toast("Save failed: "+e.message); }
+}
+async function moveItem(key, col){
+  const [kind, id] = [key.slice(0,1), key.slice(2)];
+  try{
+    if (kind==="c"){ const c = await api("/api/board/card",{method:"POST", body:JSON.stringify({id, col})}); S.board.cards[c.id]=c; }
+    else { await api(`/api/board/session/${encodeURIComponent(id)}`,{method:"POST", body:JSON.stringify({col: col||null})});
+      const s=S.sessions.get(id); if (col) S.board.overrides[id]={col, turns:s?.turns||0, ts:now()}; else delete S.board.overrides[id]; }
+    render();
+  }catch(e){ toast("Move failed: "+e.message); }
+}
+// drag & drop
+document.addEventListener("dragstart", e=>{ const k=e.target.closest?.("[data-drag]"); if(!k) return; e.dataTransfer.setData("text/plain", k.dataset.drag); e.dataTransfer.effectAllowed="move"; k.classList.add("dragging"); });
+document.addEventListener("dragend", e=>{ e.target.closest?.("[data-drag]")?.classList.remove("dragging"); document.querySelectorAll(".col.over").forEach(c=>c.classList.remove("over")); });
+document.addEventListener("dragover", e=>{ const c=e.target.closest?.("[data-drop]"); if(!c) return; e.preventDefault(); document.querySelectorAll(".col.over").forEach(x=>x!==c&&x.classList.remove("over")); c.classList.add("over"); });
+document.addEventListener("drop", e=>{ const c=e.target.closest?.("[data-drop]"); if(!c) return; e.preventDefault(); c.classList.remove("over"); const key=e.dataTransfer.getData("text/plain"); if (key) moveItem(key, c.dataset.drop); });
+document.addEventListener("change", e=>{
+  if (e.target.matches("[data-bhost]")){ S.boardHost=e.target.value; render(); }
+  if (e.target.matches("[data-bspan]")){ S.boardSpan=e.target.value; render(); }
+});
+$("#cardModal").addEventListener("click", e=>{
+  if (e.target.id==="cardModal" || e.target.closest("[data-cclose]")) return closeCard();
+  if (e.target.closest("[data-csave]")) return saveCard();
+  const del = e.target.closest("[data-cdel]");
+  if (del){ if (confirm("Delete this task card? This can't be undone.")) api(`/api/board/card/${del.dataset.cdel}/delete`,{method:"POST"}).then(()=>{ delete S.board.cards[del.dataset.cdel]; closeCard(); render(); toast("Task deleted"); }); return; }
+  if (e.target.closest("[data-ccopy]")){
+    const shq=$("#cardBox")._shq, prompt=$("#cf-notes").value.trim()||$("#cf-title").value.trim(), cwd=$("#cf-cwd").value.trim();
+    const cmd = `${cwd?`cd ${shq(cwd)} && `:""}claude ${shq(prompt)}`;
+    navigator.clipboard?.writeText(cmd).then(()=>toast("Start command copied — paste it in a terminal")).catch(()=>toast(cmd));
+  }
+});
+$("#cardModal").addEventListener("keydown", e=>{ if (e.key==="Escape") closeCard(); if (e.key==="Enter" && (e.metaKey||e.ctrlKey)) saveCard(); });
+
 /* ---------- prompts: make harness-injected messages readable */
 function cleanPrompt(p){
   p = String(p||"");
@@ -984,6 +1194,9 @@ function cmdkItems(){
   const ss = [...S.sessions.values()].sort((a,b)=>(isActive(b)-isActive(a)) || b.last_ts-a.last_ts);
   for (const s of ss.slice(0,80)){ const h=hostOf(s), st=effStatus(s);
     it.push({g:"Sessions", icon:h.local?"laptop":"server", label:`${s.project}${s.title?` — ${s.title}`:""}`, hint:`${(STATUS[st]||STATUS.idle).l} · ${h.hostname} · ${ago(s.last_ts)}`, run:()=>go(()=>{S.sel=s.id; S.traceTurn=null; S.traceSel=null; S.treeSel=null; history.replaceState(null,"","#"+encodeURIComponent(s.id));})}); }
+  it.push({g:"Go to", icon:"list", label:"Board", run:()=>go(()=>{S.sel=null;S.page="board";})});
+  it.push({g:"Board", icon:"edit", label:"New task card", run:()=>openCard(null,{col:"backlog"})});
+  for (const c of Object.values(S.board.cards||{})) it.push({g:"Board", icon:"list", label:`Task: ${c.title}`, hint:c.goal?`◎ ${c.goal}`:c.col, run:()=>openCard(c.id)});
   it.push({g:"Go to", icon:"grid", label:"Overview", run:()=>go(()=>{S.sel=null;S.page="overview";})});
   it.push({g:"Go to", icon:"zap", label:"Account usage & plan limits", run:()=>go(()=>{S.sel=null;S.page="account";})});
   for (const [f,l] of [["active","Active"],["all","All"],["ended","History"]]) it.push({g:"Go to", icon:"list", label:`Show ${l} sessions`, run:()=>{ S.filter=f; document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",b.dataset.f===f)); render(); }});
@@ -1463,7 +1676,7 @@ function applyTheme(){ const t=prefs.theme; if (t==="light"||t==="dark") documen
 
 /* ------------------------------------------------------------- events */
 document.addEventListener("click", e=>{
-  const t = e.target.closest("[data-trsel],[data-trturn],#btnDensity,#btnCmdk,[data-sel],[data-dec],[data-tl],[data-copy],[data-dismiss],[data-am],[data-ar],[data-stab],[data-tsel],[data-fscope],[data-copypath],#navOverview,#navAccount,#seg button,#btnTheme,#btnSound,#btnNotify");
+  const t = e.target.closest("[data-newcard],[data-cedit],[data-cmove],[data-smove],[data-totask],[data-goal],[data-open],#navBoard,[data-trsel],[data-trturn],#btnDensity,#btnCmdk,[data-sel],[data-dec],[data-tl],[data-copy],[data-dismiss],[data-am],[data-ar],[data-stab],[data-tsel],[data-fscope],[data-copypath],#navOverview,#navAccount,#seg button,#btnTheme,#btnSound,#btnNotify");
   if (!t) return;
   if (t.dataset.sel){ e.preventDefault(); const id=t.dataset.sel; go(()=>{ if (S.sel!==id){ S.treeSel=null; S.traceSel=null; S.traceTurn=null; } S.sel=id; history.replaceState(null,"","#"+encodeURIComponent(id)); }); window.scrollTo({top:0}); return; }
   if (t.dataset.dec) return decide(t.dataset.aid, t.dataset.dec);
@@ -1472,6 +1685,14 @@ document.addEventListener("click", e=>{
   if (t.dataset.dismiss){ api(`/api/session/${t.dataset.dismiss}/dismiss`,{method:"POST"}).then(()=>{S.sessions.delete(t.dataset.dismiss); S.sel=null; render();}); return; }
   if (t.id==="navOverview"){ go(()=>{ S.sel=null; S.page="overview"; history.replaceState(null,"","#"); }); return; }
   if (t.id==="navAccount"){ go(()=>{ S.sel=null; S.page="account"; history.replaceState(null,"","#account"); }); window.scrollTo({top:0}); return; }
+  if (t.id==="navBoard"){ go(()=>{ S.sel=null; S.page="board"; history.replaceState(null,"","#board"); }); return; }
+  if (t.dataset.newcard){ openCard(null, {col:t.dataset.newcard}); return; }
+  if (t.dataset.cmove){ moveItem("c:"+t.dataset.cmove, t.dataset.col); return; }
+  if (t.dataset.smove!=null && t.dataset.smove!==undefined && t.hasAttribute("data-smove")){ moveItem("s:"+t.dataset.smove, t.dataset.col); return; }
+  if (t.dataset.totask){ const s=S.sessions.get(t.dataset.totask); openCard(null, {title:(s.title||cleanPrompt(s.prompt)||s.project).slice(0,200), notes:cleanPrompt(s.prompt)||"", cwd:s.cwd, session:s.id, col:"running"}); return; }
+  if (t.dataset.cedit){ openCard(t.dataset.cedit); return; }
+  if (t.hasAttribute("data-goal")){ S.boardGoal = t.dataset.goal && S.boardGoal!==t.dataset.goal ? t.dataset.goal : null; render(); return; }
+  if (t.dataset.open){ const id=t.dataset.open; go(()=>{ S.sel=id; S.stab="activity"; history.replaceState(null,"","#"+encodeURIComponent(id)); }); window.scrollTo({top:0}); return; }
   if (t.dataset.trsel){ S.traceSel = S.traceSel===t.dataset.trsel ? null : t.dataset.trsel; render(); return; }
   if (t.dataset.trturn!=null && !t.disabled){ S.traceTurn=+t.dataset.trturn; S.traceSel=null; render(); return; }
   if (t.id==="btnDensity"){ prefs.compact=!prefs.compact; savePrefs(); renderTools(); toast(prefs.compact?"Compact density":"Comfortable density"); return; }
@@ -1498,7 +1719,9 @@ document.addEventListener("keydown", e=>{
   if (a && (e.key==="a"||e.key==="A")) { decide(a.id, e.shiftKey && a.suggestions?.length ? "always" : "allow"); }
   else if (a && e.key==="d") decide(a.id, "deny");
   else if (e.key==="j"||e.key==="k"){ const l=visibleSessions(); if(!l.length) return; let i=l.findIndex(s=>s.id===S.sel); i = e.key==="j"? Math.min(l.length-1,i+1) : Math.max(0,i-1); S.sel=l[i].id; render(); }
-  else if (e.key==="Escape"){ S.sel=null; S.page="overview"; render(); }
+  else if (e.key==="Escape" && S.sel){ go(()=>{ S.sel=null; }); }
+  else if (e.key==="Enter" && e.target.matches?.(".kc")){ e.target.click(); }
+  else if (e.key==="n" && S.page==="board" && !S.sel){ e.preventDefault(); openCard(null,{col:"backlog"}); }
   else if (e.key==="/"){ e.preventDefault(); $("#q").focus(); }
 });
 const tip=$("#tip");
