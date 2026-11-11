@@ -497,6 +497,10 @@ svg.hm text{font:500 10px "Geist Mono",monospace;fill:var(--muted)}
 .meter i{display:block;height:100%;border-radius:5px;background:var(--sc)}
 .lim .rs{font-size:12.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
 .lim svg.trend{width:100%;height:48px;display:block}
+.lvl-end{--sc:var(--s-end)}
+.lim-note{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border:1px solid color-mix(in srgb,var(--s-appr) 45%,var(--border));background:color-mix(in srgb,var(--s-appr) 7%,var(--surface));border-radius:10px;font-size:12.5px;color:var(--text-2);margin-bottom:12px}
+.lim-note b{color:var(--text)}
+.lim-note code{font-size:12px}
 .lvl-ok{--sc:var(--s-idle)} .lvl-warn{--sc:var(--s-appr)} .lvl-high{--sc:var(--s-wait)} .lvl-crit{--sc:var(--s-err)}
 .bars{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:6px}
 .bars i{flex:1;background:var(--c1);border-radius:3px 3px 0 0;min-height:2px}
@@ -776,14 +780,15 @@ function renderKpis(){
   const subs = all.reduce((n,s)=>n+Object.values(s.subagents||{}).filter(x=>x.status==="running").length,0);
   const needs = pendingApprovals().length + all.filter(s=>effStatus(s)==="waiting_input").length;
   const lim = primaryLimits(), rl = lim?.rate_limits || {};
-  const fh = rl.five_hour?.used_percentage, sd = rl.seven_day?.used_percentage;
+  const w5 = liveWindow(lim, "five_hour"), w7 = liveWindow(lim, "seven_day");
+  const fh = w5?.used_percentage, sd = w7?.used_percentage;
   const cost14 = dailySeries("cost", 14), tok14 = dailySeries("tok", 14);
   const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
   const tile = (num, fmt, label, opts={}) => `<div class="kpi ${opts.hot?"hot":""}" data-key="k-${label}" ${opts.tip?`title="${esc(opts.tip)}"`:""}>
       <b><span data-num="${num}" data-fmt="${fmt}">${FMT[fmt](num)}</span>${opts.dl||""}</b>${opts.spark||""}<span>${label}</span></div>`;
   const html = [
-    fh!=null ? tile(fh,"pct","5-hour limit",{hot:fh>=80, spark:spark(limitSeries(1,5*3600,24),{max:100}), tip:"Share of your plan's rolling 5-hour limit used"}) : "",
-    sd!=null ? tile(sd,"pct","Weekly limit",{hot:sd>=80, spark:spark(limitSeries(2,7*86400,28),{max:100})}) : "",
+    fh!=null ? tile(fh,"pct", w5.stale?"5-hour limit · old":"5-hour limit",{hot:fh>=80&&!w5.stale, spark:spark(limitSeries(1,5*3600,24),{max:100}), tip: w5.stale?`Last reading ${ago(lim.ts)} ago — refreshes when a terminal claude session is active`:"Share of your plan's rolling 5-hour limit used"}) : "",
+    sd!=null ? tile(sd,"pct", w7.stale?"Weekly limit · old":"Weekly limit",{hot:sd>=80&&!w7.stale, spark:spark(limitSeries(2,7*86400,28),{max:100}), tip: w7.stale?`Last reading ${ago(lim.ts)} ago`:"Share of your weekly limit used"}) : "",
     tile(act,"int","Working now"),
     tile(needs,"int","Needs you",{hot:needs>0, tip:"Approvals waiting plus sessions waiting for your input"}),
     tile(subs,"int","Subagents running"),
@@ -848,7 +853,7 @@ function renderSide(){
   const nv=$("#navOverview"); nv.innerHTML=`${ic("grid")}Overview`; nv.classList.toggle("on", !S.sel && S.page==="overview");
   const needN = boardCounts().needs;
   const nb=$("#navBoard"); nb.innerHTML=`${ic("list")}Board${needN?`<span class="badge warn" style="margin-left:auto">${needN} need you</span>`:""}`; nb.classList.toggle("on", !S.sel && S.page==="board");
-  const lim = primaryLimits(); const fh = lim?.rate_limits?.five_hour?.used_percentage;
+  const lim = primaryLimits(); const w5n = liveWindow(lim, "five_hour"); const fh = w5n && !w5n.stale ? w5n.used_percentage : null;
   const na=$("#navAccount"); na.innerHTML=`${ic("zap")}Account usage${fh!=null?`<span class="badge" style="margin-left:auto">5h ${Math.round(fh)}%</span>`:""}`; na.classList.toggle("on", !S.sel && S.page==="account");
 }
 
@@ -1509,13 +1514,29 @@ function trendSvg(hist, idx, windowSec){
     <line x1="0" x2="${W}" y1="${H-2-0.8*(H-4)}" y2="${H-2-0.8*(H-4)}" stroke="var(--border-strong)" stroke-dasharray="3 3" stroke-width="1" vector-effect="non-scaling-stroke"/>
     <path d="${d}" fill="none" stroke="var(--sc)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
 }
-function limitCard(title, w, hist, idx, windowSec, sub){
+const STALE_SEC = 30*60;
+// a window is "live" only if the reading is recent AND its reset time hasn't passed yet
+function liveWindow(lim, key){
+  const w = lim?.rate_limits?.[key];
+  if (!w || w.used_percentage==null) return null;
+  if (w.resets_at && w.resets_at <= now()) return null;
+  return {...w, stale: now()-lim.ts > STALE_SEC};
+}
+function resetCard(title, w, lastTs){
+  const when = w?.resets_at ? new Date(w.resets_at*1000) : null;
+  return `<div class="card lim lvl-end"><div class="hd">${esc(title)}<span class="pill" style="--sc:var(--s-end)">${ic("clock")}No current reading</span></div>
+    <div class="big" style="color:var(--muted)">—<small> ${when?`window reset ${when.toLocaleString([], {weekday:"short",hour:"numeric",minute:"2-digit"})}`:"not reported in the last reading"}</small></div>
+    <div class="meter"><i style="width:0"></i></div>
+    <div class="rs">Waiting for a fresh reading · last one <span data-ago="${lastTs}"></span> ago</div></div>`;
+}
+function limitCard(title, w, hist, idx, windowSec, sub, lastTs){
   if (!w || w.used_percentage==null) return "";
+  if (w.resets_at && w.resets_at <= now()) return resetCard(title, w, lastTs);
   const p = Math.max(0, w.used_percentage), L = lvl(p), [lab, icn] = lvlLabel[L];
   return `<div class="card lim lvl-${L}"><div class="hd">${esc(title)}<span class="pill" style="--sc:var(--sc)">${ic(icn)}${lab}</span></div>
     <div class="big">${p.toFixed(0)}%<small> used${sub?` · ${esc(sub)}`:""}</small></div>
     <div class="meter"><i style="width:${Math.min(100,p)}%"></i></div>
-    <div class="rs">${untilTxt(w.resets_at)}</div>
+    <div class="rs">${untilTxt(w.resets_at)}${lastTs && now()-lastTs>STALE_SEC?` · <span style="color:var(--s-appr)">as of <span data-ago="${lastTs}"></span> ago</span>`:""}</div>
     ${idx!=null?trendSvg(hist, idx, windowSec):""}</div>`;
 }
 /* ---------- activity heatmap */
@@ -1598,14 +1619,17 @@ function accountView(){
   // limits section
   let limHtml;
   if (limEntries.length){
-    limHtml = limEntries.map(([hk,l])=>{
+    const newest = limEntries[0][1];
+    limHtml = (now()-newest.ts > STALE_SEC ? `<div class="lim-note">${ic("clock",'style="color:var(--s-appr);margin-top:1px"')}<div><b>These readings are <span data-ago="${newest.ts}"></span> old.</b>
+      Claude Code only sends plan limits to its status line, and the status line only runs in <b>terminal</b> <code>claude</code> sessions. The desktop app and IDE panels don't run it.
+      The numbers refresh the next time a terminal session is open and responding.</div></div>` : "") + limEntries.map(([hk,l])=>{
       const h = S.hosts.get(hk) || {hostname:hk}; const rl=l.rate_limits; const hist=S.limitHist[hk];
       const sp = rl.spend_limit;
       return `<div class="section-title" style="margin-top:${limEntries.length>1?"14px":"0"}">${ic(h.local?"laptop":"server",'style="width:13px;height:13px;vertical-align:-2px"')} ${esc(h.user?h.user+"@":"")}${esc(h.hostname)} · updated <span data-ago="${l.ts}"></span> ago</div>
         <div class="limits">
-          ${limitCard("Current 5-hour session", rl.five_hour, hist, 1, 86400)}
-          ${limitCard("Weekly · all models", rl.seven_day, hist, 2, 7*86400)}
-          ${sp?limitCard(`Spend limit${sp.period?` · ${sp.period}`:""}`, sp, null, null, 0, sp.used_usd!=null&&sp.limit_usd!=null?`${money(sp.used_usd)} of ${money(sp.limit_usd)}`:""):""}
+          ${rl.five_hour ? limitCard("Current 5-hour session", rl.five_hour, hist, 1, 86400, null, l.ts) : resetCard("Current 5-hour session", null, l.ts)}
+          ${rl.seven_day ? limitCard("Weekly · all models", rl.seven_day, hist, 2, 7*86400, null, l.ts) : resetCard("Weekly · all models", null, l.ts)}
+          ${sp?limitCard(`Spend limit${sp.period?` · ${sp.period}`:""}`, sp, null, null, 0, sp.used_usd!=null&&sp.limit_usd!=null?`${money(sp.used_usd)} of ${money(sp.limit_usd)}`:"", l.ts):""}
         </div>`;
     }).join("");
   } else {
