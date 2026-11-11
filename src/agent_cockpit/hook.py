@@ -20,7 +20,7 @@ import time
 import urllib.error
 import urllib.request
 
-VERSION = "1.4.0"
+VERSION = "1.4.1"
 HOME = os.path.expanduser("~")
 BASE = os.path.join(HOME, ".claude", "agent-cockpit")
 CONFIG_PATH = os.path.join(BASE, "config.json")
@@ -179,7 +179,7 @@ def host_info(cfg):
     ssh = os.environ.get("SSH_CONNECTION", "")
     return {
         "hostname": cfg.get("label") or socket.gethostname().split(".")[0],
-        "fqdn": socket.gethostname(),
+        "fqdn": cfg.get("label") or socket.gethostname(),
         "user": os.environ.get("USER") or os.environ.get("USERNAME") or "",
         "os": f"{platform.system()} {platform.release()}",
         "ssh_from": ssh.split(" ")[0] if ssh else "",

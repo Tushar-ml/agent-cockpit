@@ -1193,7 +1193,7 @@ function cmdkItems(){
   if (sel) it.push({g:`This session · ${sel.project}`, icon:"terminal", label:"Copy resume command", run:()=>navigator.clipboard?.writeText(`cd ${JSON.stringify(sel.cwd)} && claude --resume ${sel.id}`).then(()=>toast("Copied resume command"))});
   const ss = [...S.sessions.values()].sort((a,b)=>(isActive(b)-isActive(a)) || b.last_ts-a.last_ts);
   for (const s of ss.slice(0,80)){ const h=hostOf(s), st=effStatus(s);
-    it.push({g:"Sessions", icon:h.local?"laptop":"server", label:`${s.project}${s.title?` — ${s.title}`:""}`, hint:`${(STATUS[st]||STATUS.idle).l} · ${h.hostname} · ${ago(s.last_ts)}`, run:()=>go(()=>{S.sel=s.id; S.traceTurn=null; S.traceSel=null; S.treeSel=null; history.replaceState(null,"","#"+encodeURIComponent(s.id));})}); }
+    it.push({g:"Sessions", icon:h.local?"laptop":"server", label:`${s.project}${s.title?` — ${s.title}`:""}`, hint:`${(STATUS[st]||STATUS.idle).l} · ${h.hostname} · ${ago(s.last_ts)}`, run:()=>go(()=>{S.sel=s.id; S.stab="activity"; S.traceTurn=null; S.traceSel=null; S.treeSel=null; history.replaceState(null,"","#"+encodeURIComponent(s.id));})}); }
   it.push({g:"Go to", icon:"list", label:"Board", run:()=>go(()=>{S.sel=null;S.page="board";})});
   it.push({g:"Board", icon:"edit", label:"New task card", run:()=>openCard(null,{col:"backlog"})});
   for (const c of Object.values(S.board.cards||{})) it.push({g:"Board", icon:"list", label:`Task: ${c.title}`, hint:c.goal?`◎ ${c.goal}`:c.col, run:()=>openCard(c.id)});

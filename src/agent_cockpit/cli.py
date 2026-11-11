@@ -44,7 +44,7 @@ STATE_PATH = os.path.join(BASE, "state.json")
 SETTINGS_PATH = os.path.join(CLAUDE_DIR, "settings.json")
 HOOK_MARK = "agent-cockpit/hook.py"
 DEFAULT_PORT = 7777
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 
 MAX_EVENTS = 600
 SCAN_DAYS = 3
@@ -65,7 +65,8 @@ def ensure_token():
 
 
 def local_hostname():
-    return socket.gethostname().split(".")[0]
+    # COCKPIT_HOSTNAME overrides the machine name shown in the UI (handy for demos/screenshots)
+    return os.environ.get("COCKPIT_HOSTNAME") or socket.gethostname().split(".")[0]
 
 
 # =========================================================== summaries ====
@@ -1110,7 +1111,7 @@ class Store:
     # ---------- local transcript scanner (history + usage without hooks)
     def scan_local(self):
         cutoff = time.time() - SCAN_DAYS * 86400
-        host = {"hostname": local_hostname(), "fqdn": socket.gethostname(), "user": os.environ.get("USER", ""),
+        host = {"hostname": local_hostname(), "fqdn": os.environ.get("COCKPIT_HOSTNAME") or socket.gethostname(), "user": os.environ.get("USER", ""),
                 "os": f"{os.uname().sysname} {os.uname().release}", "ssh": False, "ssh_from": ""}
         files = glob.glob(os.path.join(CLAUDE_DIR, "projects", "*", "*.jsonl"))
         for path in files:
