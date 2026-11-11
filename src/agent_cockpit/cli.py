@@ -44,7 +44,7 @@ STATE_PATH = os.path.join(BASE, "state.json")
 SETTINGS_PATH = os.path.join(CLAUDE_DIR, "settings.json")
 HOOK_MARK = "agent-cockpit/hook.py"
 DEFAULT_PORT = 7777
-__version__ = "1.5.1"
+__version__ = "1.6.0"
 
 MAX_EVENTS = 600
 SCAN_DAYS = 3
@@ -175,7 +175,161 @@ def _local_day_hour(ts):
         return time.strftime("%Y-%m-%d"), time.localtime().tm_hour
 
 
-ACCOUNT_VERSION = 3  # v3: adds per-hour activity (rebuilds totals from transcripts once)
+ACCOUNT_VERSION = 4  # v3: per-hour activity; v4: timestamped usage weights for limit estimates (rebuilds once)
+
+
+# ===================================================== plan-limit estimate ======
+# Plan limits only arrive via the terminal status line. Between readings we estimate them from
+# transcripts: every response is weighted by its API-equivalent cost (a proxy for compute), usage is
+# grouped into Claude's windows (5h windows start at the first message after the previous one ends;
+# weekly windows are fixed and anchored by the reported reset time), and the ratio
+# "percent used / weighted usage" is calibrated on the real readings we have seen.
+FIVE_H, WEEK = 5 * 3600, 7 * 86400
+
+
+def _five_hour_windows(usage, anchors):
+    """usage: sorted [(ts, w)], anchors: known 5h reset times -> list of (start, end)."""
+    wins, i, n = [], 0, len(usage)
+    anchors = sorted(set(a for a in anchors if a))
+    while i < n:
+        t0 = usage[i][0]
+        a = next((r for r in anchors if r - FIVE_H <= t0 < r), None)
+        start, end = (a - FIVE_H, a) if a else (t0, t0 + FIVE_H)
+        wins.append((start, end))
+        while i < n and usage[i][0] < end:
+            i += 1
+    return wins
+
+
+def _wsum(usage, t0, t1):
+    return sum(w for t, w in usage if t0 <= t < t1)
+
+
+def _median(xs):
+    xs = sorted(xs)
+    m = len(xs) // 2
+    return xs[m] if len(xs) % 2 else (xs[m - 1] + xs[m]) / 2
+
+
+def _distinct(hist, idx):
+    """Readings where the value changed (the status line re-sends the same value every minute)."""
+    out, prev = [], None
+    for h in hist:
+        v = h[idx] if len(h) > idx else None
+        if v is None:
+            prev = None
+            continue
+        if v != prev:
+            out.append(h)
+            prev = v
+    return out
+
+
+def _rate(usage, readings, idx, max_gap):
+    """Percent-of-limit per API-dollar, from consecutive readings inside one window."""
+    runs, cur = [], []
+    for h in readings:
+        if cur and (h[idx] < cur[-1][idx] or h[0] - cur[-1][0] > max_gap):
+            runs.append(cur)
+            cur = []
+        cur.append(h)
+    if cur:
+        runs.append(cur)
+    pairs = []  # (d_pct, d_cost, run_index)
+    for ri, run in enumerate(runs):
+        for a, b in zip(run, run[1:]):
+            dc = _wsum(usage, a[0], b[0])
+            if dc > 0.05:
+                pairs.append((b[idx] - a[idx], dc, ri))
+    dp, dc = sum(p[0] for p in pairs), sum(p[1] for p in pairs)
+    if dc < 1.0 or dp < 2:
+        return None, None, 0
+    k = dp / dc
+    # uncertainty: how much the rate moves between halves of the evidence (or between runs)
+    half = len(pairs) // 2
+    parts = [pairs[:half], pairs[half:]] if len({p[2] for p in pairs}) < 2 else \
+        [[p for p in pairs if p[2] == r] for r in {p[2] for p in pairs}]
+    ks = [sum(p[0] for p in g) / sum(p[1] for p in g) for g in parts if g and sum(p[1] for p in g) > 0.5]
+    rel = max(abs(x - k) / k for x in ks) if len(ks) >= 2 else 0.5
+    return k, max(rel, 0.1), len(pairs)
+
+
+def estimate_limits(usage, hist, snap, now=None):
+    """Estimate current plan-limit use between status-line readings.
+
+    Anchor on the last real reading and add (rate x usage since then); after a window resets,
+    count usage from the reset. The rate (percent per API-dollar) is measured from consecutive
+    readings, so no assumption is needed about where a window started."""
+    now = now or time.time()
+    usage = sorted(usage)
+    if not usage or not hist:
+        return {}
+    out = {}
+    rl = (snap or {}).get("rate_limits") or {}
+    snap_ts = (snap or {}).get("ts") or 0
+
+    # ---------------- 5-hour window
+    r5 = _distinct(hist, 1)
+    k, rel, n = _rate(usage, r5, 1, FIVE_H)
+    if k and r5:
+        last = r5[-1]
+        t_l, p_l = last[0], last[1]
+        end = last[3] if len(last) > 3 and last[3] else None
+        if (rl.get("five_hour") or {}).get("resets_at") and snap_ts >= t_l:
+            end = rl["five_hour"]["resets_at"]
+        if end is None:
+            # unknown reset: the window ended within 5h of the reading, and before any later
+            # reading that no longer reported a 5-hour window
+            later_empty = [h[0] for h in hist if h[0] > t_l and (len(h) < 2 or h[1] is None)]
+            end = min([t_l + FIVE_H] + later_empty[:1])
+        if now < end:
+            inc = k * _wsum(usage, t_l, now)
+            est = {"pct": p_l + inc, "resets_at": int(end), "anchor_pct": p_l, "anchor_ts": int(t_l), "since_usd": round(_wsum(usage, t_l, now), 2)}
+            est["err"] = 1 + inc * rel
+        else:
+            # walk windows forward from the last known reset: each starts at the first message after the previous ends
+            start, w_end = None, end
+            for t, _ in usage:
+                if t < w_end:
+                    continue
+                if t > now:
+                    break
+                start, w_end = t, t + FIVE_H
+            if start is not None and now < w_end:
+                used = _wsum(usage, start, now)
+                est = {"pct": k * used, "resets_at": int(w_end), "window_start": int(start), "since_usd": round(used, 2)}
+                est["err"] = 1 + k * used * rel
+            else:
+                est = {"pct": 0.0, "resets_at": None, "idle": True, "err": 0}
+        est.update(pct=round(min(100.0, max(0.0, est["pct"])), 1), err=round(min(50.0, est["err"]), 1),
+                   rate=round(k, 3), samples=n)
+        out["five_hour"] = est
+
+    # ---------------- weekly window (fixed, anchored on the reported reset time)
+    rw = _distinct(hist, 2)
+    r7 = (rl.get("seven_day") or {}).get("resets_at") or next((h[4] for h in reversed(hist) if len(h) > 4 and h[4]), None)
+    k7, rel7, n7 = _rate(usage, rw, 2, WEEK)
+    if k7 and rw and r7:
+        last = rw[-1]
+        t_l, p_l = last[0], last[2]
+        end = r7
+        while end <= t_l:
+            end += WEEK
+        if now < end:
+            inc = k7 * _wsum(usage, t_l, now)
+            est = {"pct": p_l + inc, "resets_at": int(end), "anchor_pct": p_l, "anchor_ts": int(t_l), "err": 1 + inc * rel7,
+                   "since_usd": round(_wsum(usage, t_l, now), 2)}
+        else:
+            st = end
+            while st + WEEK <= now:
+                st += WEEK
+            used = _wsum(usage, st, now)
+            est = {"pct": k7 * used, "resets_at": int(st + WEEK), "window_start": int(st), "err": 1 + k7 * used * rel7, "since_usd": round(used, 2)}
+        est.update(pct=round(min(100.0, max(0.0, est["pct"])), 1), err=round(min(50.0, est["err"]), 1), rate=round(k7, 4), samples=n7)
+        out["seven_day"] = est
+    if out:
+        out["as_of"] = now
+    return out
 
 
 def _empty_account():
@@ -422,7 +576,8 @@ class Store:
         self.acct_ids = set()
         self.acct_dirty = False
         self.limits = {}      # host key -> latest statusline rate_limits snapshot
-        self.limit_hist = {}  # host key -> [[ts, five_hour_pct, seven_day_pct], ...]
+        self.limit_hist = {}  # host key -> [[ts, five_hour_pct, seven_day_pct, five_reset, week_reset], ...]
+        self.recent_usage = []  # [(epoch, api_equivalent_cost)] for the last ~9 days (limit estimates)
         self.sl_sig = {}
         self.board = {"cards": {}, "overrides": {}}
         self._cwd_hint = {}
@@ -454,6 +609,8 @@ class Store:
             b = d.get("board") or {}
             self.board = {"cards": b.get("cards") or {}, "overrides": b.get("overrides") or {}}
             self.limit_hist = d.get("limit_hist", {})
+            if d.get("account", {}).get("v") == ACCOUNT_VERSION:
+                self.recent_usage = [tuple(x) for x in d.get("recent_usage", [])]
             acct = d.get("account") or {}
             if acct.get("v") == ACCOUNT_VERSION:
                 self.account = acct
@@ -483,6 +640,7 @@ class Store:
             data = {"sessions": sess, "hosts": self.hosts, "scan_offsets": self.scan_offsets,
                     "account": self.account, "acct_ids": list(self.acct_ids),
                     "limits": self.limits, "limit_hist": self.limit_hist, "files_v": 3,
+                    "recent_usage": self.recent_usage[-20000:],
                     "board": self.board}
             self.dirty = False
         tmp = STATE_PATH + ".tmp"
@@ -689,8 +847,29 @@ class Store:
         if ts:
             a["first"] = min(a["first"] or ts, ts)
             a["last"] = max(a["last"] or ts, ts)
+            ep = _iso(ts)
+            if ep and ep > time.time() - 9 * 86400:
+                self.recent_usage.append((ep, round(c, 5)))
         self.acct_dirty = True
         self.dirty = True
+
+    def limit_estimate(self):
+        with self.lock:
+            if not self.limits:
+                return {}
+            hk, snap = max(self.limits.items(), key=lambda kv: kv[1].get("ts", 0))
+            cut = time.time() - 9 * 86400
+            if self.recent_usage and self.recent_usage[0][0] < cut:
+                self.recent_usage = [u for u in self.recent_usage if u[0] >= cut]
+            usage, hist = list(self.recent_usage), list(self.limit_hist.get(hk, []))
+        try:
+            est = estimate_limits(usage, hist, snap)
+        except Exception as e:
+            print("estimate error:", e, file=sys.stderr)
+            return {}
+        if est:
+            est["host"] = hk
+        return est
 
     def account_public(self):
         a = self.account
@@ -717,7 +896,7 @@ class Store:
                 sd = (rl.get("seven_day") or {}).get("used_percentage")
                 hist = self.limit_hist.setdefault(hk, [])
                 if not hist or ts - hist[-1][0] >= 60 or hist[-1][1] != fh or hist[-1][2] != sd:
-                    hist.append([ts, fh, sd])
+                    hist.append([ts, fh, sd, (rl.get("five_hour") or {}).get("resets_at"), (rl.get("seven_day") or {}).get("resets_at")])
                     cutoff = ts - 8 * 86400
                     while hist and hist[0][0] < cutoff:
                         hist.pop(0)
@@ -1234,6 +1413,11 @@ class Store:
                 self.scan_local()
             except Exception as e:
                 print("scan error:", e, file=sys.stderr)
+            est = self.limit_estimate()
+            sig = json.dumps({k: (v.get("pct"), v.get("resets_at")) if isinstance(v, dict) else None for k, v in est.items() if k != "as_of"}, sort_keys=True)
+            if sig != getattr(self, "_est_sig", None):
+                self._est_sig = sig
+                self.broadcast({"type": "limit_est", "est": est})
             if self.acct_dirty:
                 with self.lock:
                     self.acct_dirty = False
@@ -1254,6 +1438,7 @@ class Store:
                 "limits": self.limits,
                 "limit_hist": {k: v[-1500:] for k, v in self.limit_hist.items()},
                 "board": self.board,
+                "limit_est": self.limit_estimate(),
                 "server": {"hostname": local_hostname(), "time": time.time(), "version": __version__},
             }
 

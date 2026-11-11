@@ -498,6 +498,10 @@ svg.hm text{font:500 10px "Geist Mono",monospace;fill:var(--muted)}
 .lim .rs{font-size:12.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
 .lim svg.trend{width:100%;height:48px;display:block}
 .lvl-end{--sc:var(--s-end)}
+.meter.est i{background:repeating-linear-gradient(45deg,var(--sc) 0 6px,color-mix(in srgb,var(--sc) 55%,transparent) 6px 12px)}
+.meter.est{position:relative}
+.meter.est b{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--sc) 22%,transparent);border-radius:5px}
+.lim .big .pm{font:500 15px "Geist Mono",monospace;color:var(--muted);margin-left:4px;letter-spacing:0}
 .lim-note{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border:1px solid color-mix(in srgb,var(--s-appr) 45%,var(--border));background:color-mix(in srgb,var(--s-appr) 7%,var(--surface));border-radius:10px;font-size:12.5px;color:var(--text-2);margin-bottom:12px}
 .lim-note b{color:var(--text)}
 .lim-note code{font-size:12px}
@@ -576,7 +580,7 @@ const TOKEN = "__COCKPIT_TOKEN__";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const S = { sessions:new Map(), hosts:new Map(), approvals:new Map(), sel:null, page:"overview", filter:"active", q:"", tl:"all", connected:false, skew:0,
-  account:null, limits:{}, limitHist:{}, acctMetric:"cost", acctRange:30, hmMetric:"msgs",
+  account:null, limits:{}, limitHist:{}, acctMetric:"cost", acctRange:30, hmMetric:"msgs", limitEst:{},
   stab:"activity", treeSel:null, fileScope:"session", projFiles:{},
   board:{cards:{}, overrides:{}}, boardGoal:null, boardHost:"", boardSpan:"48h" };
 const prefs = (()=>{ try{ return JSON.parse(localStorage.getItem("cockpit")||"{}") }catch{ return {} } })();
@@ -646,7 +650,7 @@ async function loadState(){
   S.sessions = new Map(d.sessions.map(s=>[s.id,s]));
   S.hosts = new Map(d.hosts.map(h=>[h.key,h]));
   S.approvals = new Map(d.approvals.map(a=>[a.id,a]));
-  S.account = d.account; S.limits = d.limits||{}; S.limitHist = d.limit_hist||{}; S.board = d.board || S.board;
+  S.account = d.account; S.limits = d.limits||{}; S.limitHist = d.limit_hist||{}; S.board = d.board || S.board; S.limitEst = d.limit_est || {};
   if (!S.sel && location.hash==="#account") S.page="account";
   else if (!S.sel && location.hash==="#board") S.page="board";
   else if (!S.sel && location.hash.length>1) S.sel = decodeURIComponent(location.hash.slice(1));
@@ -672,6 +676,7 @@ function connect(){
       if (isNew) alertApproval(m.approval);
     } else if (m.type==="account"){ S.account = m.account; }
     else if (m.type==="board"){ S.board = m.board; }
+    else if (m.type==="limit_est"){ S.limitEst = m.est || {}; }
     else if (m.type==="limits"){ S.limits[m.host] = m.limits; S.limitHist[m.host] = m.hist; }
     else if (m.type==="remove"){ S.sessions.delete(m.id); if (S.sel===m.id) S.sel=null; }
     schedule();
@@ -780,15 +785,18 @@ function renderKpis(){
   const subs = all.reduce((n,s)=>n+Object.values(s.subagents||{}).filter(x=>x.status==="running").length,0);
   const needs = pendingApprovals().length + all.filter(s=>effStatus(s)==="waiting_input").length;
   const lim = primaryLimits(), rl = lim?.rate_limits || {};
-  const w5 = liveWindow(lim, "five_hour"), w7 = liveWindow(lim, "seven_day");
+  let w5 = liveWindow(lim, "five_hour"), w7 = liveWindow(lim, "seven_day");
+  const E = S.limitEst?.host===lim?.host ? S.limitEst : {};
+  if ((!w5 || w5.stale) && E.five_hour) w5 = {used_percentage:E.five_hour.pct, est:true};
+  if ((!w7 || w7.stale) && E.seven_day) w7 = {used_percentage:E.seven_day.pct, est:true};
   const fh = w5?.used_percentage, sd = w7?.used_percentage;
   const cost14 = dailySeries("cost", 14), tok14 = dailySeries("tok", 14);
   const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
   const tile = (num, fmt, label, opts={}) => `<div class="kpi ${opts.hot?"hot":""}" data-key="k-${label}" ${opts.tip?`title="${esc(opts.tip)}"`:""}>
       <b><span data-num="${num}" data-fmt="${fmt}">${FMT[fmt](num)}</span>${opts.dl||""}</b>${opts.spark||""}<span>${label}</span></div>`;
   const html = [
-    fh!=null ? tile(fh,"pct", w5.stale?"5-hour limit · old":"5-hour limit",{hot:fh>=80&&!w5.stale, spark:spark(limitSeries(1,5*3600,24),{max:100}), tip: w5.stale?`Last reading ${ago(lim.ts)} ago — refreshes when a terminal claude session is active`:"Share of your plan's rolling 5-hour limit used"}) : "",
-    sd!=null ? tile(sd,"pct", w7.stale?"Weekly limit · old":"Weekly limit",{hot:sd>=80&&!w7.stale, spark:spark(limitSeries(2,7*86400,28),{max:100}), tip: w7.stale?`Last reading ${ago(lim.ts)} ago`:"Share of your weekly limit used"}) : "",
+    fh!=null ? tile(fh,"pct", w5.est?"5-hour limit · est.":w5.stale?"5-hour limit · old":"5-hour limit",{hot:fh>=80&&!w5.stale, spark:spark(limitSeries(1,5*3600,24),{max:100}), tip: w5.est?`Estimated from transcripts (±${Math.ceil(E.five_hour.err)} pts) — no live reading`: w5.stale?`Last reading ${ago(lim.ts)} ago — refreshes when a terminal claude session is active`:"Share of your plan's rolling 5-hour limit used"}) : "",
+    sd!=null ? tile(sd,"pct", w7.est?"Weekly limit · est.":w7.stale?"Weekly limit · old":"Weekly limit",{hot:sd>=80&&!w7.stale, spark:spark(limitSeries(2,7*86400,28),{max:100}), tip: w7.stale?`Last reading ${ago(lim.ts)} ago`:"Share of your weekly limit used"}) : "",
     tile(act,"int","Working now"),
     tile(needs,"int","Needs you",{hot:needs>0, tip:"Approvals waiting plus sessions waiting for your input"}),
     tile(subs,"int","Subagents running"),
@@ -853,7 +861,8 @@ function renderSide(){
   const nv=$("#navOverview"); nv.innerHTML=`${ic("grid")}Overview`; nv.classList.toggle("on", !S.sel && S.page==="overview");
   const needN = boardCounts().needs;
   const nb=$("#navBoard"); nb.innerHTML=`${ic("list")}Board${needN?`<span class="badge warn" style="margin-left:auto">${needN} need you</span>`:""}`; nb.classList.toggle("on", !S.sel && S.page==="board");
-  const lim = primaryLimits(); const w5n = liveWindow(lim, "five_hour"); const fh = w5n && !w5n.stale ? w5n.used_percentage : null;
+  const lim = primaryLimits(); const w5n = liveWindow(lim, "five_hour");
+  const fh = w5n && !w5n.stale ? w5n.used_percentage : (S.limitEst?.five_hour && S.limitEst.host===lim?.host ? S.limitEst.five_hour.pct : null);
   const na=$("#navAccount"); na.innerHTML=`${ic("zap")}Account usage${fh!=null?`<span class="badge" style="margin-left:auto">5h ${Math.round(fh)}%</span>`:""}`; na.classList.toggle("on", !S.sel && S.page==="account");
 }
 
@@ -1529,6 +1538,23 @@ function resetCard(title, w, lastTs){
     <div class="meter"><i style="width:0"></i></div>
     <div class="rs">Waiting for a fresh reading · last one <span data-ago="${lastTs}"></span> ago</div></div>`;
 }
+function limitOrEst(title, key, l, hk, hist, idx, windowSec){
+  const live = liveWindow(l, key), est = S.limitEst?.host===hk ? S.limitEst[key] : null;
+  if (live && !live.stale) return limitCard(title, l.rate_limits[key], hist, idx, windowSec, null, l.ts);
+  if (est) return estCard(title, est, l.ts);
+  return l.rate_limits[key] ? limitCard(title, l.rate_limits[key], hist, idx, windowSec, null, l.ts) : resetCard(title, null, l.ts);
+}
+function estCard(title, e, lastTs){
+  const p = e.pct, L = lvl(p), lo = Math.max(0, p - e.err), hi = Math.min(100, p + e.err);
+  const why = e.idle ? "No messages since the last window reset — the next window starts with your next message."
+    : e.anchor_pct!=null ? `Last real reading ${e.anchor_pct}% + ${money(e.since_usd)} of usage since, at ${e.rate}% per API-$ measured from ${e.samples} of your readings.`
+    : `${money(e.since_usd)} of usage since this window started, at ${e.rate}% per API-$ measured from ${e.samples} of your readings.`;
+  return `<div class="card lim lvl-${L}" title="${esc(why)} Counts usage this dashboard can see (all Claude Code sessions with the hooks); claude.ai web/mobile isn't included.">
+    <div class="hd">${esc(title)}<span class="pill" style="--sc:var(--s-think)">${ic("sparkle")}Estimated</span></div>
+    <div class="big">≈${p.toFixed(0)}%<span class="pm">±${Math.ceil(e.err)}</span><small> used</small></div>
+    <div class="meter est"><b style="left:${lo}%;width:${Math.max(0,hi-lo)}%"></b><i style="width:${Math.min(100,p)}%"></i></div>
+    <div class="rs">${e.resets_at?untilTxt(e.resets_at):"window idle"} · <span class="muted">${esc(why)}</span></div></div>`;
+}
 function limitCard(title, w, hist, idx, windowSec, sub, lastTs){
   if (!w || w.used_percentage==null) return "";
   if (w.resets_at && w.resets_at <= now()) return resetCard(title, w, lastTs);
@@ -1622,13 +1648,13 @@ function accountView(){
     const newest = limEntries[0][1];
     limHtml = (now()-newest.ts > STALE_SEC ? `<div class="lim-note">${ic("clock",'style="color:var(--s-appr);margin-top:1px"')}<div><b>These readings are <span data-ago="${newest.ts}"></span> old.</b>
       Claude Code only sends plan limits to its status line, and the status line only runs in <b>terminal</b> <code>claude</code> sessions. The desktop app and IDE panels don't run it.
-      The numbers refresh the next time a terminal session is open and responding.</div></div>` : "") + limEntries.map(([hk,l])=>{
+      ${Object.keys(S.limitEst||{}).length>1 ? "Until then, the cards below are <b>estimates</b> from your transcripts, calibrated on your past readings." : "The numbers refresh the next time a terminal session is open and responding."}</div></div>` : "") + limEntries.map(([hk,l])=>{
       const h = S.hosts.get(hk) || {hostname:hk}; const rl=l.rate_limits; const hist=S.limitHist[hk];
       const sp = rl.spend_limit;
       return `<div class="section-title" style="margin-top:${limEntries.length>1?"14px":"0"}">${ic(h.local?"laptop":"server",'style="width:13px;height:13px;vertical-align:-2px"')} ${esc(h.user?h.user+"@":"")}${esc(h.hostname)} · updated <span data-ago="${l.ts}"></span> ago</div>
         <div class="limits">
-          ${rl.five_hour ? limitCard("Current 5-hour session", rl.five_hour, hist, 1, 86400, null, l.ts) : resetCard("Current 5-hour session", null, l.ts)}
-          ${rl.seven_day ? limitCard("Weekly · all models", rl.seven_day, hist, 2, 7*86400, null, l.ts) : resetCard("Weekly · all models", null, l.ts)}
+          ${limitOrEst("Current 5-hour session", "five_hour", l, hk, hist, 1, 86400)}
+          ${limitOrEst("Weekly · all models", "seven_day", l, hk, hist, 2, 7*86400)}
           ${sp?limitCard(`Spend limit${sp.period?` · ${sp.period}`:""}`, sp, null, null, 0, sp.used_usd!=null&&sp.limit_usd!=null?`${money(sp.used_usd)} of ${money(sp.limit_usd)}`:"", l.ts):""}
         </div>`;
     }).join("");

@@ -221,6 +221,28 @@ class SmokeTest(unittest.TestCase):
         # every counted response lands in exactly one local hour bucket
         self.assertEqual(sum(sum(v) for v in st["hours"].values()), st["msgs"])
 
+    def test_limit_estimate(self):
+        sys.path.insert(0, PKG)
+        import cli
+        t0 = 1_800_000_000
+        # true rate: 2% of the 5h limit per API-dollar; $1 every 2 minutes
+        usage = [(t0 + i * 120, 1.0) for i in range(60)]
+        hist = [[t0 + i * 120 + 60, 10 + 2 * (i + 1), 30 + 0.5 * (i + 1), t0 + 5 * 3600, t0 + 3 * 86400] for i in range(10)]
+        snap = {"ts": hist[-1][0], "rate_limits": {"five_hour": {"used_percentage": hist[-1][1], "resets_at": t0 + 5 * 3600},
+                                                   "seven_day": {"used_percentage": hist[-1][2], "resets_at": t0 + 3 * 86400}}}
+        now = t0 + 40 * 120 + 30           # usage at i=10..40 lands after the last reading: $31
+        e = cli.estimate_limits(usage, hist, snap, now=now)
+        self.assertAlmostEqual(e["five_hour"]["rate"], 2.0, places=2)
+        self.assertAlmostEqual(e["five_hour"]["pct"], 30 + 2 * 31, delta=0.5)   # 30% at last reading + 2%/$ x $31
+        self.assertEqual(e["five_hour"]["resets_at"], t0 + 5 * 3600)
+        self.assertAlmostEqual(e["seven_day"]["pct"], 35 + 0.5 * 31, delta=0.5)
+        # after the 5h window ends, a new window counts only usage since its first message
+        later = [(t0 + 6 * 3600 + i * 120, 1.0) for i in range(5)]
+        e2 = cli.estimate_limits(usage + later, hist, snap, now=t0 + 6 * 3600 + 5 * 120)
+        self.assertAlmostEqual(e2["five_hour"]["pct"], 2 * 5, delta=0.5)
+        self.assertEqual(e2["five_hour"]["window_start"], t0 + 6 * 3600)
+        self.assertEqual(cli.estimate_limits([], hist, snap), {})
+
     def test_pricing(self):
         sys.path.insert(0, PKG)
         import cli

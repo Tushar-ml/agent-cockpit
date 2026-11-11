@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-cockpit"
-version = "1.5.1"
+version = "1.6.0"
 description = "Live dashboard for Claude Code: status, approvals, subagents and token usage across your laptop and SSH machines"
 readme = "README.md"
 license = { text = "MIT" }
