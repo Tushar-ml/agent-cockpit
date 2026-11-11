@@ -1,4 +1,4 @@
-# Agent Cockpit
+<p align="center"><img src="assets/banner.png" alt="Agent Cockpit: mission control for every Claude Code agent, on your laptop and every machine you SSH into" width="100%"></p>
 
 A live dashboard for every Claude Code session you run, on your laptop and on any machine you SSH into. You can watch what each session is doing, approve or deny tool calls from the browser, follow subagents, and see token usage.
 
