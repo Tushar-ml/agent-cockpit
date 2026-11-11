@@ -21,6 +21,7 @@ A live dashboard for every Claude Code session you run, on your laptop and on an
 - **Trace**: a waterfall for each prompt. Every tool call is a bar on a time axis, subagent work is nested under the subagent that did it, approval waits show as amber hatching ("47s waiting on you"), and failures are red. Click any row to see its input and result, and step through turns with ‹ ›.
 - **Command palette (⌘K)**: jump to any session or view, approve or deny the waiting request, switch filters, theme and density.
 - **Live top bar**: plan limits, work in progress, "needs you", and today's spend and tokens, each with a sparkline and a change against your recent average, plus a tool-calls-per-minute strip across all machines.
+- **Activity heatmap**: a GitHub-style calendar of agent activity for the last year, switchable between responses, active hours, tokens and spend. It also shows a weekday × hour grid of when your agents work, current and longest streaks, your busiest day and your peak hour.
 - **Account usage**: your plan's **5-hour and weekly limits** (percent used, reset countdown, trend) and any gateway spend limit. Also today / 7-day / 30-day / all-time token usage and API-equivalent cost, a daily chart, and breakdowns by model, project and machine. Covers every transcript on the machine plus every remote machine reporting in.
 - **Machines**: local and remote hosts grouped, with an SSH badge and the source IP. Sessions from the last 3 days are picked up from local transcripts.
 

@@ -211,6 +211,16 @@ class SmokeTest(unittest.TestCase):
         self.assertTrue(self.api("POST", f"/api/board/card/{c['id']}/delete")["ok"])
         self.assertNotIn(c["id"], self.api("GET", "/api/state")["board"]["cards"])
 
+    def test_hourly_activity(self):
+        sys.path.insert(0, PKG)
+        import cli
+        day, hour = cli._local_day_hour("2026-03-04T15:30:00Z")
+        self.assertRegex(day, r"^2026-03-0[45]$")
+        self.assertTrue(0 <= hour < 24)
+        st = self.api("GET", "/api/state")["account"]
+        # every counted response lands in exactly one local hour bucket
+        self.assertEqual(sum(sum(v) for v in st["hours"].values()), st["msgs"])
+
     def test_pricing(self):
         sys.path.insert(0, PKG)
         import cli

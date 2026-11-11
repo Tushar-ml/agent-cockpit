@@ -44,7 +44,7 @@ STATE_PATH = os.path.join(BASE, "state.json")
 SETTINGS_PATH = os.path.join(CLAUDE_DIR, "settings.json")
 HOOK_MARK = "agent-cockpit/hook.py"
 DEFAULT_PORT = 7777
-__version__ = "1.4.1"
+__version__ = "1.5.0"
 
 MAX_EVENTS = 600
 SCAN_DAYS = 3
@@ -163,18 +163,23 @@ def cost_of(e):
 
 
 def _local_day(ts):
+    return _local_day_hour(ts)[0]
+
+
+def _local_day_hour(ts):
     try:
         from datetime import datetime
-        return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone().strftime("%Y-%m-%d")
+        d = datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone()
+        return d.strftime("%Y-%m-%d"), d.hour
     except Exception:
-        return time.strftime("%Y-%m-%d")
+        return time.strftime("%Y-%m-%d"), time.localtime().tm_hour
 
 
-ACCOUNT_VERSION = 2
+ACCOUNT_VERSION = 3  # v3: adds per-hour activity (rebuilds totals from transcripts once)
 
 
 def _empty_account():
-    return {"v": ACCOUNT_VERSION, "daily": {}, "models": {}, "projects": {}, "hosts": {}, "first": None, "last": None}
+    return {"v": ACCOUNT_VERSION, "daily": {}, "hours": {}, "models": {}, "projects": {}, "hosts": {}, "first": None, "last": None}
 
 
 FILE_TOOLS = {"Read": "r", "Edit": "e", "MultiEdit": "e", "Write": "w", "NotebookEdit": "e"}
@@ -653,7 +658,9 @@ class Store:
         tin, tout, tcr, tcw = (int(e.get(k) or 0) for k in ("in", "out", "cr", "cw"))
         tok = tin + tout + tcr + tcw
         ts = e.get("ts") or ""
-        day = _local_day(ts) if ts else time.strftime("%Y-%m-%d")
+        day, hour = _local_day_hour(ts) if ts else (time.strftime("%Y-%m-%d"), time.localtime().tm_hour)
+        hrs = a["hours"].setdefault(day, [0] * 24)  # responses per local hour -> activity heatmap
+        hrs[hour] += 1
         d = a["daily"].setdefault(day, {"tok": 0, "out": 0, "cost": 0.0, "msgs": 0, "models": {}})
         d["tok"] += tok
         d["out"] += tout
@@ -689,7 +696,8 @@ class Store:
         a = self.account
         days = sorted(a["daily"])[-370:]
         projects = sorted(a["projects"].values(), key=lambda x: -x["cost"])[:100]
-        return {"daily": {k: a["daily"][k] for k in days}, "models": a["models"], "projects": projects,
+        return {"daily": {k: a["daily"][k] for k in days}, "hours": {k: a.get("hours", {}).get(k) for k in days if a.get("hours", {}).get(k)},
+                "models": a["models"], "projects": projects,
                 "hosts": a["hosts"], "first": a["first"], "last": a["last"],
                 "tok": sum(x["tok"] for x in a["hosts"].values()), "cost": sum(x["cost"] for x in a["hosts"].values()),
                 "msgs": sum(x["msgs"] for x in a["hosts"].values())}

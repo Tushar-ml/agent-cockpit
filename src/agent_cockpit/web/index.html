@@ -17,6 +17,7 @@
   --code-bg:#f6f6f4; --diff-add:#e6f4e6; --diff-del:#fbe6e6;
   --shadow:none; --shadow-pop:0 12px 40px rgba(0,0,0,.14),0 0 0 1px rgba(0,0,0,.06);
   --glow:0 0 0 1px rgba(181,120,0,.45),0 6px 24px rgba(181,120,0,.12);
+  --h0:#ededeb; --h1:#b7d3f6; --h2:#6da7ec; --h3:#2a78d6; --h4:#184f95;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -28,6 +29,7 @@
     --code-bg:#0d0d0d; --diff-add:#11281a; --diff-del:#331515;
     --shadow:none; --shadow-pop:0 16px 50px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
     --glow:0 0 0 1px rgba(250,178,25,.45),0 6px 28px rgba(250,178,25,.10);
+    --h0:#1b1b1b; --h1:#0d366b; --h2:#1c5cab; --h3:#3987e5; --h4:#9ec5f4;
   }
 }
 :root[data-theme="dark"]{
@@ -39,6 +41,7 @@
   --code-bg:#0d0d0d; --diff-add:#11281a; --diff-del:#331515;
   --shadow:none; --shadow-pop:0 16px 50px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
   --glow:0 0 0 1px rgba(250,178,25,.45),0 6px 28px rgba(250,178,25,.10);
+  --h0:#1b1b1b; --h1:#0d366b; --h2:#1c5cab; --h3:#3987e5; --h4:#9ec5f4;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -304,6 +307,21 @@ body.compact .grid2{gap:12px} body.compact .stack{gap:12px}
 .stabs .live-dot{width:6px;height:6px;border-radius:50%;background:var(--s-sub);animation:breathe 1.6s ease-in-out infinite}
 .tabpane{margin-top:18px}
 
+/* activity heatmap */
+.hm-stats{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:14px}
+.hm-stats div{display:flex;flex-direction:column}
+.hm-stats b{font:600 18px "Geist Mono",monospace;letter-spacing:-.02em}
+.hm-stats span{font-size:11.5px;color:var(--muted)}
+.hm-wrap{overflow-x:auto}
+svg.hm{display:block}
+svg.hm rect{rx:2.5px;ry:2.5px}
+svg.hm rect:hover{stroke:var(--text);stroke-width:1.2}
+svg.hm text{font:500 10px "Geist Mono",monospace;fill:var(--muted)}
+.hm-legend{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);justify-content:flex-end;margin-top:8px}
+.hm-legend i{width:11px;height:11px;border-radius:2.5px;display:inline-block}
+.hm-grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px;margin-top:18px}
+@media (max-width:1100px){.hm-grid2{grid-template-columns:1fr}}
+
 /* board */
 .bd-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .bd-top h1{margin:0;font-size:22px;letter-spacing:-.025em;font-weight:650}
@@ -554,7 +572,7 @@ const TOKEN = "__COCKPIT_TOKEN__";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const S = { sessions:new Map(), hosts:new Map(), approvals:new Map(), sel:null, page:"overview", filter:"active", q:"", tl:"all", connected:false, skew:0,
-  account:null, limits:{}, limitHist:{}, acctMetric:"cost", acctRange:30,
+  account:null, limits:{}, limitHist:{}, acctMetric:"cost", acctRange:30, hmMetric:"msgs",
   stab:"activity", treeSel:null, fileScope:"session", projFiles:{},
   board:{cards:{}, overrides:{}}, boardGoal:null, boardHost:"", boardSpan:"48h" };
 const prefs = (()=>{ try{ return JSON.parse(localStorage.getItem("cockpit")||"{}") }catch{ return {} } })();
@@ -1199,6 +1217,7 @@ function cmdkItems(){
   for (const c of Object.values(S.board.cards||{})) it.push({g:"Board", icon:"list", label:`Task: ${c.title}`, hint:c.goal?`◎ ${c.goal}`:c.col, run:()=>openCard(c.id)});
   it.push({g:"Go to", icon:"grid", label:"Overview", run:()=>go(()=>{S.sel=null;S.page="overview";})});
   it.push({g:"Go to", icon:"zap", label:"Account usage & plan limits", run:()=>go(()=>{S.sel=null;S.page="account";})});
+  it.push({g:"Go to", icon:"grid", label:"Activity heatmap", run:()=>{ go(()=>{S.sel=null;S.page="account";}); setTimeout(()=>document.querySelector("svg.hm")?.scrollIntoView({behavior:"smooth",block:"center"}),350); }});
   for (const [f,l] of [["active","Active"],["all","All"],["ended","History"]]) it.push({g:"Go to", icon:"list", label:`Show ${l} sessions`, run:()=>{ S.filter=f; document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",b.dataset.f===f)); render(); }});
   it.push({g:"Settings", icon:"moon", label:"Toggle theme", run:()=>$("#btnTheme").click()});
   it.push({g:"Settings", icon:"list", label:"Toggle density", run:()=>$("#btnDensity").click()});
@@ -1499,6 +1518,71 @@ function limitCard(title, w, hist, idx, windowSec, sub){
     <div class="rs">${untilTxt(w.resets_at)}</div>
     ${idx!=null?trendSvg(hist, idx, windowSec):""}</div>`;
 }
+/* ---------- activity heatmap */
+function heatLevels(vals){
+  const nz = vals.filter(v=>v>0).sort((a,b)=>a-b);
+  if (!nz.length) return ()=>0;
+  const q = f => nz[Math.min(nz.length-1, Math.floor(f*(nz.length-1)))];
+  const t = [q(.25), q(.5), q(.8)];
+  return v => !v ? 0 : v<=t[0] ? 1 : v<=t[1] ? 2 : v<=t[2] ? 3 : 4;
+}
+const hourLbl = h => h===0?"12a":h<12?h+"a":h===12?"12p":(h-12)+"p";
+function heatmapCard(A){
+  const metric = S.hmMetric, hours = A.hours || {}, daily = A.daily || {};
+  const val = k => metric==="hrs" ? (hours[k]||[]).filter(Boolean).length : metric==="msgs" ? (daily[k]?.msgs||0) : metric==="tok" ? (daily[k]?.tok||0) : (daily[k]?.cost||0);
+  const fmtv = v => metric==="hrs" ? `${v} active hour${v===1?"":"s"}` : metric==="msgs" ? `${v.toLocaleString()} responses` : metric==="tok" ? `${fmtN(v)} tokens` : money(v);
+  const today = new Date(now()*1000); today.setHours(12,0,0,0);
+  const dow = (today.getDay()+6)%7;
+  const start = new Date(today.getTime() - (52*7+dow)*864e5);
+  const cells = [];
+  for (let i=0; i<=52*7+dow; i++){ const d=new Date(start.getTime()+i*864e5); const k=dayKeyOf(d); cells.push({d, k, v:val(k), w:Math.floor(i/7), r:(d.getDay()+6)%7}); }
+  const lvl = heatLevels(cells.map(c=>c.v));
+  const C=12, G=3, L=28, T=18, W=L+53*(C+G), H=T+7*(C+G);
+  let months="", lastM=-1;
+  for (const c of cells){ if (c.r===0 && c.d.getMonth()!==lastM){ lastM=c.d.getMonth(); if (c.w<52) months+=`<text x="${L+c.w*(C+G)}" y="11">${c.d.toLocaleDateString([], {month:"short"})}</text>`; } }
+  const rows = ["Mon","","Wed","","Fri","",""].map((t,i)=>t?`<text x="0" y="${T+i*(C+G)+10}">${t}</text>`:"").join("");
+  const rects = cells.map(c=>`<rect x="${L+c.w*(C+G)}" y="${T+c.r*(C+G)}" width="${C}" height="${C}" fill="var(--h${lvl(c.v)})" data-tip="${c.d.toLocaleDateString([], {weekday:"short",month:"short",day:"numeric",year:"numeric"})} · ${fmtv(c.v)}"></rect>`).join("");
+  const keys = cells.map(c=>c.k), act = keys.map(k=>(hours[k]||[]).some(Boolean) || (daily[k]?.msgs||0)>0);
+  let cur=0; for (let i=act.length-1;i>=0;i--){ if (act[i]) cur++; else if (i===act.length-1) continue; else break; }
+  let best=0, run=0; for (const a of act){ run = a ? run+1 : 0; best = Math.max(best, run); }
+  const activeDays = act.filter(Boolean).length;
+  const top = cells.reduce((m,c)=>c.v>m.v?c:m, {v:0});
+  const agentHours = keys.reduce((n,k)=>n+(hours[k]||[]).filter(Boolean).length, 0);
+  const how = Array.from({length:7},()=>new Array(24).fill(0));
+  for (let i=0;i<90;i++){ const d=new Date(today.getTime()-i*864e5), h=hours[dayKeyOf(d)]; if (!h) continue; const r=(d.getDay()+6)%7; h.forEach((v,j)=>how[r][j]+=v); }
+  const lv2 = heatLevels(how.flat());
+  const C2=15, G2=3, L2=30, T2=16, W2=L2+24*(C2+G2), H2=T2+7*(C2+G2);
+  const hl = [0,6,12,18].map(h=>`<text x="${L2+h*(C2+G2)}" y="10">${hourLbl(h)}</text>`).join("");
+  const dn = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const howRects = how.map((row,r)=>row.map((v,h)=>`<rect x="${L2+h*(C2+G2)}" y="${T2+r*(C2+G2)}" width="${C2}" height="${C2}" fill="var(--h${lv2(v)})" data-tip="${dn[r]} ${String(h).padStart(2,"0")}:00 · ${v.toLocaleString()} responses (90 days)"></rect>`).join("")).join("")
+    + dn.map((t,r)=>r%2===0?`<text x="0" y="${T2+r*(C2+G2)+11}">${t}</text>`:"").join("");
+  let peak={r:0,h:0,v:-1}; how.forEach((row,r)=>row.forEach((v,h)=>{ if (v>peak.v) peak={r,h,v}; }));
+  const byHour = new Array(24).fill(0); how.forEach(row=>row.forEach((v,h)=>byHour[h]+=v));
+  const pkH = byHour.indexOf(Math.max(...byHour));
+  const legend = `<div class="hm-legend">Less ${[0,1,2,3,4].map(i=>`<i style="background:var(--h${i})"></i>`).join("")} More</div>`;
+  return `<div class="card"><div class="card-h">${ic("grid")}Activity
+      <div class="seg2" style="margin-left:auto">${[["msgs","Responses"],["hrs","Active hours"],["tok","Tokens"],["cost","Spend"]].map(([k,l])=>`<button data-hm="${k}" class="${metric===k?"on":""}">${l}</button>`).join("")}</div></div>
+    <div class="card-b">
+      <div class="hm-stats">
+        <div><b>${activeDays}</b><span>active days · last year</span></div>
+        <div><b>${cur}</b><span>day streak now</span></div>
+        <div><b>${best}</b><span>longest streak</span></div>
+        <div><b>${agentHours.toLocaleString()}</b><span>hours with agents working</span></div>
+        ${top.v?`<div><b>${top.d.toLocaleDateString([], {month:"short",day:"numeric"})}</b><span>busiest day · ${esc(fmtv(top.v))}</span></div>`:""}
+        ${peak.v>0?`<div><b>${hourLbl(pkH)}</b><span>peak hour · busiest slot ${dn[peak.r]} ${String(peak.h).padStart(2,"0")}:00</span></div>`:""}
+      </div>
+      <div class="hm-wrap"><svg class="hm" viewBox="0 0 ${W} ${H}" style="width:100%;min-width:640px;height:auto" role="img" aria-label="Daily agent activity over the last year">${months}${rows}${rects}</svg></div>
+      ${legend}
+    </div></div>
+    <div class="hm-grid2">
+      <div class="card"><div class="card-h">${ic("clock")}When your agents work<span class="sub">responses by weekday and hour · last 90 days</span></div>
+        <div class="card-b"><div class="hm-wrap"><svg class="hm" viewBox="0 0 ${W2} ${H2}" style="width:100%;min-width:420px;height:auto" role="img" aria-label="Agent activity by weekday and hour">${hl}${howRects}</svg></div>${legend}</div></div>
+      <div class="card"><div class="card-h">${ic("zap")}By hour of day<span class="sub">last 90 days</span></div>
+        <div class="card-b"><div class="spark" style="height:120px">${byHour.map((v,h)=>`<i style="height:${Math.max(2,100*v/Math.max(1,...byHour))}%;${h===pkH?"background:var(--accent)":""}" data-tip="${String(h).padStart(2,"0")}:00 · ${v.toLocaleString()} responses"></i>`).join("")}</div>
+        <div class="spark-l"><span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>11p</span></div></div></div>
+    </div>`;
+}
+
 function accountView(){
   const A = S.account || {daily:{},models:{},projects:[],hosts:{}};
   const limEntries = Object.entries(S.limits||{}).filter(([,l])=>l?.rate_limits).sort((a,b)=>b[1].ts-a[1].ts);
@@ -1585,7 +1669,10 @@ cockpit statusline on            # terminal (pip install)</pre>
       ${stat(money(liveCost),"Active sessions now",`${live.length} working`)}
     </div>
     <div class="note">Costs are estimates at Anthropic API list prices (cache writes and reads priced separately). On a Pro/Max plan you aren't billed per token, so read these as API-equivalent value; your plan limits above are what actually cap you.</div>
-    <div class="stack" style="margin-top:18px">${chart}${modelTbl}${projTbl}${hostTbl}</div>`;
+    <div class="section-title">Activity</div>
+    ${heatmapCard(A)}
+    <div class="section-title">Spend &amp; tokens</div>
+    <div class="stack">${chart}${modelTbl}${projTbl}${hostTbl}</div>`;
 }
 
 function subagentRow(sa){
@@ -1676,7 +1763,7 @@ function applyTheme(){ const t=prefs.theme; if (t==="light"||t==="dark") documen
 
 /* ------------------------------------------------------------- events */
 document.addEventListener("click", e=>{
-  const t = e.target.closest("[data-newcard],[data-cedit],[data-cmove],[data-smove],[data-totask],[data-goal],[data-open],#navBoard,[data-trsel],[data-trturn],#btnDensity,#btnCmdk,[data-sel],[data-dec],[data-tl],[data-copy],[data-dismiss],[data-am],[data-ar],[data-stab],[data-tsel],[data-fscope],[data-copypath],#navOverview,#navAccount,#seg button,#btnTheme,#btnSound,#btnNotify");
+  const t = e.target.closest("[data-hm],[data-newcard],[data-cedit],[data-cmove],[data-smove],[data-totask],[data-goal],[data-open],#navBoard,[data-trsel],[data-trturn],#btnDensity,#btnCmdk,[data-sel],[data-dec],[data-tl],[data-copy],[data-dismiss],[data-am],[data-ar],[data-stab],[data-tsel],[data-fscope],[data-copypath],#navOverview,#navAccount,#seg button,#btnTheme,#btnSound,#btnNotify");
   if (!t) return;
   if (t.dataset.sel){ e.preventDefault(); const id=t.dataset.sel; go(()=>{ if (S.sel!==id){ S.treeSel=null; S.traceSel=null; S.traceTurn=null; } S.sel=id; history.replaceState(null,"","#"+encodeURIComponent(id)); }); window.scrollTo({top:0}); return; }
   if (t.dataset.dec) return decide(t.dataset.aid, t.dataset.dec);
@@ -1685,6 +1772,7 @@ document.addEventListener("click", e=>{
   if (t.dataset.dismiss){ api(`/api/session/${t.dataset.dismiss}/dismiss`,{method:"POST"}).then(()=>{S.sessions.delete(t.dataset.dismiss); S.sel=null; render();}); return; }
   if (t.id==="navOverview"){ go(()=>{ S.sel=null; S.page="overview"; history.replaceState(null,"","#"); }); return; }
   if (t.id==="navAccount"){ go(()=>{ S.sel=null; S.page="account"; history.replaceState(null,"","#account"); }); window.scrollTo({top:0}); return; }
+  if (t.dataset.hm){ S.hmMetric=t.dataset.hm; render(); return; }
   if (t.id==="navBoard"){ go(()=>{ S.sel=null; S.page="board"; history.replaceState(null,"","#board"); }); return; }
   if (t.dataset.newcard){ openCard(null, {col:t.dataset.newcard}); return; }
   if (t.dataset.cmove){ moveItem("c:"+t.dataset.cmove, t.dataset.col); return; }
